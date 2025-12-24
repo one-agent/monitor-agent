@@ -1,4 +1,4 @@
-package io.agentscope.monitor.agent;
+package com.oneagent.monitor.agent;
 
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.formatter.openai.OpenAIFormatter;
@@ -7,12 +7,12 @@ import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.OpenAIChatModel;
 import io.agentscope.core.tool.Toolkit;
-import io.agentscope.monitor.model.config.MonitorProperties;
-import io.agentscope.monitor.service.KnowledgeBaseService;
-import io.agentscope.monitor.tool.ApifoxApiTool;
-import io.agentscope.monitor.tool.FeishuWebhookTool;
-import io.agentscope.monitor.tool.KnowledgeQueryTool;
-import io.agentscope.monitor.tool.MonitorCheckTool;
+import com.oneagent.monitor.model.config.MonitorProperties;
+import com.oneagent.monitor.service.KnowledgeBaseService;
+import com.oneagent.monitor.tool.ApifoxApiTool;
+import com.oneagent.monitor.tool.FeishuWebhookTool;
+import com.oneagent.monitor.tool.KnowledgeQueryTool;
+import com.oneagent.monitor.tool.MonitorCheckTool;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;

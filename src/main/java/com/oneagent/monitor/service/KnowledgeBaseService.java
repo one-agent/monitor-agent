@@ -1,4 +1,4 @@
-package io.agentscope.monitor.service;
+package com.oneagent.monitor.service;
 
 import io.agentscope.core.rag.knowledge.SimpleKnowledge;
 import io.agentscope.core.rag.store.InMemoryStore;
@@ -41,7 +41,7 @@ public class KnowledgeBaseService {
         try {
             // Note: In actual implementation, this would use AgentScope's Knowledge classes
             // For this project, we'll use a simple in-memory approach
-            // since the embedding models might need external API keys
+            // since embedding models might need external API keys
 
             Path kbPath = Paths.get(knowledgePath);
             if (!Files.exists(kbPath)) {

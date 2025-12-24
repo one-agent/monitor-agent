@@ -1,8 +1,8 @@
-package io.agentscope.monitor.tool;
+package com.oneagent.monitor.tool;
 
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolExecutionContext;
-import io.agentscope.monitor.service.KnowledgeBaseService;
+import com.oneagent.monitor.service.KnowledgeBaseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

@@ -17,7 +17,7 @@ monitor-agent/
 ├── pom.xml                                    # Maven 依赖配置
 ├── src/
 │   └── main/
-│       ├── java/io/agentscope/monitor/
+│       ├── java/com/oneagent/monitor/
 │       │   ├── MonitorAgentApplication.java      # Spring Boot 主类
 │       │   ├── agent/
 │       │   │   ├── AgentConfig.java           # Agent 配置类

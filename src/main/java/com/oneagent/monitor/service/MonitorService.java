@@ -1,7 +1,7 @@
-package io.agentscope.monitor.service;
+package com.oneagent.monitor.service;
 
-import io.agentscope.monitor.model.dto.MonitorLog;
-import io.agentscope.monitor.model.entity.MonitorStatus;
+import com.oneagent.monitor.model.dto.MonitorLog;
+import com.oneagent.monitor.model.entity.MonitorStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

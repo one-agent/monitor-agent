@@ -1,11 +1,11 @@
-package io.agentscope.monitor.tool;
+package com.oneagent.monitor.tool;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolExecutionContext;
-import io.agentscope.monitor.model.config.MonitorProperties;
+import com.oneagent.monitor.model.config.MonitorProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;

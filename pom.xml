@@ -12,7 +12,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>io.agentscope</groupId>
+    <groupId>com.oneagent</groupId>
     <artifactId>monitor-agent</artifactId>
     <version>1.0.0</version>
     <name>Monitor Agent</name>

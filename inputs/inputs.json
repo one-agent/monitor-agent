@@ -1,0 +1,54 @@
+[
+    {
+        "case_id": "C001",
+        "user_query": "你们平台的计费模式是怎样的？",
+        "api_status": "200 OK",
+        "api_response_time": "120ms",
+        "monitor_log": []
+    },
+    {
+        "case_id": "C002",
+        "user_query": "刚才模型是不是挂了？怎么一直没反应？",
+        "api_status": "500 Internal Server Error",
+        "api_response_time": "Timeout",
+        "monitor_log": [
+            {
+                "timestamp": "10:00:01",
+                "status": "Error",
+                "msg": "Connection Refused"
+            }
+        ]
+    },
+    {
+        "case_id": "C003",
+        "user_query": "今天系统稳定吗？",
+        "api_status": "200 OK",
+        "api_response_time": "95ms",
+        "monitor_log": []
+    },
+    {
+        "case_id": "C004",
+        "user_query": "你们的客服电话是多少？",
+        "api_status": "200 OK",
+        "api_response_time": "88ms",
+        "monitor_log": []
+    },
+    {
+        "case_id": "C005",
+        "user_query": "刚才出现了500错误，现在恢复了吗？",
+        "api_status": "503 Service Unavailable",
+        "api_response_time": "Timeout",
+        "monitor_log": [
+            {
+                "timestamp": "14:30:25",
+                "status": "Error",
+                "msg": "Service Unavailable"
+            },
+            {
+                "timestamp": "14:31:10",
+                "status": "Error",
+                "msg": "Gateway Timeout"
+            }
+        ]
+    }
+]

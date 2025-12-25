@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Service for monitoring system status
+ * 监控系统状态的服务类
  */
 @Slf4j
 @Service
@@ -25,14 +25,14 @@ public class MonitorService {
     private final List<MonitorLog> monitorLogs = new ArrayList<>();
 
     /**
-     * Check API status and determine if alert is needed
+     * 检查 API 状态并判断是否需要告警
      */
     public boolean needsAlert(String apiStatus) {
         return apiStatus != null && !"200 OK".equalsIgnoreCase(apiStatus);
     }
 
     /**
-     * Update current monitor status
+     * 更新当前监控状态
      */
     public void updateStatus(String apiStatus, String responseTime, List<MonitorLog> logs) {
         this.currentStatus = MonitorStatus.builder()
@@ -43,7 +43,7 @@ public class MonitorService {
                 .lastCheckTime(LocalDateTime.now().format(TIME_FORMATTER))
                 .build();
 
-        // Update logs if provided
+        // 如果提供了日志则更新
         if (logs != null && !logs.isEmpty()) {
             synchronized (monitorLogs) {
                 monitorLogs.clear();
@@ -51,11 +51,11 @@ public class MonitorService {
             }
         }
 
-        log.debug("Monitor status updated: {}", this.currentStatus);
+        log.debug("监控状态已更新: {}", this.currentStatus);
     }
 
     /**
-     * Get current monitor status
+     * 获取当前监控状态
      */
     public MonitorStatus getCurrentStatus() {
         if (currentStatus == null) {
@@ -71,7 +71,7 @@ public class MonitorService {
     }
 
     /**
-     * Get recent monitor logs
+     * 获取最近的监控日志
      */
     public List<MonitorLog> getRecentLogs() {
         synchronized (monitorLogs) {
@@ -80,22 +80,22 @@ public class MonitorService {
     }
 
     /**
-     * Add a monitor log entry
+     * 添加一条监控日志记录
      */
     public void addLog(MonitorLog monitorLog) {
         synchronized (monitorLogs) {
             monitorLogs.add(monitorLog);
         }
-        log.debug("Added monitor log: {}", log);
+        log.debug("已添加监控日志: {}", log);
     }
 
     /**
-     * Clear all monitor logs
+     * 清除所有监控日志
      */
     public void clearLogs() {
         synchronized (monitorLogs) {
             monitorLogs.clear();
         }
-        log.info("Monitor logs cleared");
+        log.info("监控日志已清除");
     }
 }

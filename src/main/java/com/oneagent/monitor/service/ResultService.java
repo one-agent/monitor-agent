@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Service for processing batch results
+ * 处理批量结果的服务类
  */
 @Slf4j
 @Service
@@ -34,24 +34,24 @@ public class ResultService {
         log.info("Processing batch: input={}, output={}", inputPath, outputPath);
 
         try {
-            // Read input cases
+            // 读取输入用例
             List<InputCase> inputCases = readInputFile(inputPath);
-            log.info("Loaded {} cases from input file", inputCases.size());
+            log.info("已加载 {} 个用例，来自输入文件", inputCases.size());
 
-            // Process each case
+            // 处理每个用例
             List<ResultCase> results = new ArrayList<>();
             for (InputCase inputCase : inputCases) {
                 ResultCase result = chatService.processQuery(inputCase);
                 results.add(result);
             }
 
-            // Write results
+            // 写入结果
             writeOutputFile(outputPath, results);
-            log.info("Batch processing completed. Results written to {}", outputPath);
+            log.info("批量处理完成。结果已写入 {}", outputPath);
 
         } catch (Exception e) {
-            log.error("Error processing batch", e);
-            throw new RuntimeException("Failed to process batch: " + e.getMessage(), e);
+            log.error("处理批量出错", e);
+            throw new RuntimeException("批量处理失败: " + e.getMessage(), e);
         }
     }
 

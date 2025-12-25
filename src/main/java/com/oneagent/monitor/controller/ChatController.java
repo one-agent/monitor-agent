@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * REST API controller for chat interactions
+ * 聊天交互的 REST API 控制器
  */
 @Slf4j
 @RestController
@@ -29,16 +29,16 @@ public class ChatController {
     private final ResultService resultService;
 
     /**
-     * Single chat endpoint
+     * 单对话端点
      */
     @PostMapping("/chat")
     public ResponseEntity<Map<String, String>> chat(@RequestBody Map<String, String> request) {
-        log.info("Chat request: {}", request);
+        log.info("聊天请求: {}", request);
 
         String userQuery = request.get("query");
         if (userQuery == null || userQuery.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of(
-                    "error", "Query parameter 'query' is required"
+                    "error", "查询参数 'query' 是必需的"
             ));
         }
 
@@ -47,25 +47,25 @@ public class ChatController {
     }
 
     /**
-     * Process a single case with full context
+     * 处理包含完整上下文的单个用例
      */
     @PostMapping("/process")
     public ResponseEntity<ResultCase> processCase(@RequestBody InputCase inputCase) {
-        log.info("Processing case: {}", inputCase.getCaseId());
+        log.info("处理用例: {}", inputCase.getCaseId());
 
         ResultCase result = chatService.processQuery(inputCase);
         return ResponseEntity.ok(result);
     }
 
     /**
-     * Batch process endpoint
+     * 批量处理端点
      */
     @PostMapping("/process-batch")
     public ResponseEntity<Map<String, Object>> processBatch(
             @RequestParam(required = false) String inputFile,
             @RequestParam(required = false) String outputFile
     ) {
-        log.info("Batch processing request: input={}, output={}", inputFile, outputFile);
+        log.info("批量处理请求: 输入={}, 输出={}", inputFile, outputFile);
 
         String inputPath = inputFile != null ? inputFile : "inputs/inputs.json";
         String outputPath = outputFile != null ? outputFile : "outputs/results.json";
@@ -81,7 +81,7 @@ public class ChatController {
     }
 
     /**
-     * Get current monitor status
+     * 获取当前监控状态
      */
     @GetMapping("/monitor/status")
     public ResponseEntity<MonitorStatus> getMonitorStatus() {
@@ -90,7 +90,7 @@ public class ChatController {
     }
 
     /**
-     * Health check endpoint
+     * 健康检查端点
      */
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {
@@ -101,7 +101,7 @@ public class ChatController {
     }
 
     /**
-     * Get API info
+     * 获取 API 信息
      */
     @GetMapping("/info")
     public ResponseEntity<Map<String, Object>> info() {
@@ -122,13 +122,13 @@ public class ChatController {
     }
 
     /**
-     * Error handler
+     * 错误处理器
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleError(Exception e) {
-        log.error("Request processing error", e);
+        log.error("请求处理错误", e);
         return ResponseEntity.internalServerError().body(Map.of(
-                "error", "An error occurred: " + e.getMessage()
+                "error", "发生错误: " + e.getMessage()
         ));
     }
 }

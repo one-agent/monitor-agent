@@ -59,23 +59,40 @@ monitor-agent/
 ### LLM 配置（必填）
 
 ```properties
-llm.api-key=your-api-key-here
-llm.base-url=http://your-llm-endpoint/v1
-llm.model-name=your-model-name
+monitor.llm.api-key=your-api-key-here
+monitor.llm.base-url=http://your-llm-endpoint/v1
+monitor.llm.model-name=your-model-name
+monitor.llm.temperature=0.7
+monitor.llm.max-tokens=2000
+monitor.llm.stream=false
 ```
 
 ### 飞书 Webhook 配置（可选）
 
 ```properties
-feishu.webhook.url=https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-id
+monitor.feishu.webhook-url=https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-id
 ```
 
 ### Apifox API 配置（可选）
 
 ```properties
-apifox.api-token=your-apifox-token-here
-apifox.project-id=your-project-id-here
-apifox.folder-id=your-folder-id-here
+monitor.apifox.api-url=https://api.apifox.com
+monitor.apifox.api-token=your-apifox-token-here
+monitor.apifox.project-id=your-project-id-here
+monitor.apifox.folder-id=your-folder-id-here
+```
+
+### 知识库路径配置（可选）
+
+```properties
+monitor.knowledge.path=src/main/resources/knowledge
+```
+
+### 输入输出路径配置（可选）
+
+```properties
+monitor.path.input-path=inputs/inputs.json
+monitor.path.output-path=outputs/results.json
 ```
 
 ## 运行方式

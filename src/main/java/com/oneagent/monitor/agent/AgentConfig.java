@@ -1,18 +1,16 @@
 package com.oneagent.monitor.agent;
 
-import io.agentscope.core.ReActAgent;
-import io.agentscope.core.formatter.openai.OpenAIFormatter;
-import io.agentscope.core.memory.InMemoryMemory;
-import io.agentscope.core.message.MsgRole;
-import io.agentscope.core.model.GenerateOptions;
-import io.agentscope.core.model.OpenAIChatModel;
-import io.agentscope.core.tool.Toolkit;
 import com.oneagent.monitor.model.config.MonitorProperties;
-import com.oneagent.monitor.service.KnowledgeBaseService;
 import com.oneagent.monitor.tool.ApifoxApiTool;
 import com.oneagent.monitor.tool.FeishuWebhookTool;
 import com.oneagent.monitor.tool.KnowledgeQueryTool;
 import com.oneagent.monitor.tool.MonitorCheckTool;
+import io.agentscope.core.ReActAgent;
+import io.agentscope.core.formatter.openai.OpenAIChatFormatter;
+import io.agentscope.core.memory.InMemoryMemory;
+import io.agentscope.core.model.GenerateOptions;
+import io.agentscope.core.model.OpenAIChatModel;
+import io.agentscope.core.tool.Toolkit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -42,11 +40,11 @@ public class AgentConfig {
                 monitorProperties.getLlm().getModelName());
 
         return OpenAIChatModel.builder()
-                .apiKey(monitorProperties.getLlm().getApiKey())
                 .baseUrl(monitorProperties.getLlm().getBaseUrl())
+                .apiKey(monitorProperties.getLlm().getApiKey())
                 .modelName(monitorProperties.getLlm().getModelName())
                 .stream(monitorProperties.getLlm().getStream())
-                .formatter(new OpenAIFormatter())
+                .formatter(new OpenAIChatFormatter())
                 .defaultOptions(GenerateOptions.builder()
                         .temperature(monitorProperties.getLlm().getTemperature())
                         .maxTokens(monitorProperties.getLlm().getMaxTokens())
@@ -69,9 +67,7 @@ public class AgentConfig {
         toolkit.registerTool(monitorCheckTool);
         toolkit.registerTool(knowledgeQueryTool);
 
-        log.debug("Registered tools: {}", toolkit.getTools().stream()
-                .map(t -> t.getName())
-                .toList());
+        log.debug("Registered tools: {}", toolkit.getToolNames());
 
         return toolkit;
     }

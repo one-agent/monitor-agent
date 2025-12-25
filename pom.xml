@@ -20,7 +20,7 @@
 
     <properties>
         <java.version>17</java.version>
-        <agentscope.version>1.0.3</agentscope.version>
+        <revision>1.0.3</revision>
     </properties>
 
     <dependencies>
@@ -47,14 +47,20 @@
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope</artifactId>
-            <version>${agentscope.version}</version>
+            <version>${revision}</version>
+        </dependency>
+
+        <!-- OpenAI SDK for AgentScope compatibility -->
+        <dependency>
+            <groupId>com.openai</groupId>
+            <artifactId>openai-java</artifactId>
+            <version>4.13.0</version>
         </dependency>
 
         <!-- OkHttp4 for HTTP Client -->
         <dependency>
-            <groupId>com.squareup.okhttp4</groupId>
+            <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
-            <version>4.12.0</version>
         </dependency>
 
         <!-- Jackson for JSON Processing -->

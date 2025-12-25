@@ -23,6 +23,9 @@ public class KnowledgeBaseService {
     private final String knowledgePath;
     private SimpleKnowledge knowledge;
 
+    public KnowledgeBaseService() {
+        this("knowledge");
+    }
     public KnowledgeBaseService(String knowledgePath) {
         this.knowledgePath = knowledgePath;
     }
@@ -67,7 +70,7 @@ public class KnowledgeBaseService {
             // Note: This is a simplified approach without actual embeddings
             // In production, you would configure an embedding model
             this.knowledge = SimpleKnowledge.builder()
-                    .embeddingStore(new InMemoryStore())
+                    .embeddingStore(InMemoryStore.builder().build())
                     .build();
 
             log.info("Knowledge base loaded with {} documents", documents.size());

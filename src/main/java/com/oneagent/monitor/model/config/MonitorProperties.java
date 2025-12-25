@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Data
 @Configuration
-@ConfigurationProperties(prefix = "")
+@ConfigurationProperties(prefix = "monitor")
 public class MonitorProperties {
 
     /**

@@ -94,6 +94,13 @@ public class FeishuWebhookTool {
     }
 
     /**
+     * Send alert with specified timestamp
+     */
+    public String sendFeishuAlert(String timestamp, String errorCode, String latency) {
+        return sendFeishuAlert(null, timestamp, errorCode, latency);
+    }
+
+    /**
      * Send alert with current timestamp
      */
     public String sendFeishuAlert(String errorCode, String latency) {

@@ -103,6 +103,13 @@ public class ApifoxApiTool {
     }
 
     /**
+     * Create document with specified timestamp
+     */
+    public String createApifoxDocument(String timestamp, String errorCode, String errorMsg, String latency) {
+        return createApifoxDocument(null, timestamp, errorCode, errorMsg, latency);
+    }
+
+    /**
      * Create document with current timestamp
      */
     public String createApifoxDocument(String errorCode, String errorMsg, String latency) {

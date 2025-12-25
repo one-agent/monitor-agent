@@ -82,9 +82,9 @@ public class MonitorService {
     /**
      * Add a monitor log entry
      */
-    public void addLog(MonitorLog log) {
+    public void addLog(MonitorLog monitorLog) {
         synchronized (monitorLogs) {
-            monitorLogs.add(log);
+            monitorLogs.add(monitorLog);
         }
         log.debug("Added monitor log: {}", log);
     }

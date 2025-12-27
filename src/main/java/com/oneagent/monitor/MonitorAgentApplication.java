@@ -22,8 +22,8 @@ public class MonitorAgentApplication {
         log.info("=========================================");
         log.info("应用名称: {}", env.getProperty("spring.application.name"));
         log.info("服务端口: {}", env.getProperty("server.port"));
-        log.info("LLM 模型: {}", env.getProperty("llm.model-name"));
-        log.info("LLM 服务地址: {}", env.getProperty("llm.base-url"));
+        log.info("LLM 模型: {}", env.getProperty("monitor.llm.model-name"));
+        log.info("LLM 服务地址: {}", env.getProperty("monitor.llm.base-url"));
         log.info("=========================================");
         log.info("可用端点:");
         log.info("  - POST /api/chat              : 简单对话");

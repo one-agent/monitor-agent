@@ -2,13 +2,13 @@ package com.oneagent.monitor.model.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 
 /**
  * Monitor Agent 的配置属性
  */
 @Data
-@Configuration
+@Component
 @ConfigurationProperties(prefix = "monitor")
 public class MonitorProperties {
 

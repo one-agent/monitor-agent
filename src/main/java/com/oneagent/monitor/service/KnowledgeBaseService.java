@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Service for knowledge base management
+ * 知识库管理服务类
  */
 @Slf4j
 @Service
@@ -36,15 +36,15 @@ public class KnowledgeBaseService {
     }
 
     /**
-     * Load knowledge base from files
+     * 从文件加载知识库
      */
     public void loadKnowledgeBase() {
         log.info("Loading knowledge base from: {}", knowledgePath);
 
         try {
-            // Note: In actual implementation, this would use AgentScope's Knowledge classes
-            // For this project, we'll use a simple in-memory approach
-            // since embedding models might need external API keys
+            // 注意：在实际实现中，这会使用 AgentScope 的 Knowledge 类
+            // 对于本项目，我们将使用简单的内存方式
+            // 因为嵌入模型可能需要外部 API 密钥
 
             Path kbPath = Paths.get(knowledgePath);
             if (!Files.exists(kbPath)) {
@@ -66,9 +66,9 @@ public class KnowledgeBaseService {
                         }
                     });
 
-            // Initialize SimpleKnowledge with in-memory store
-            // Note: This is a simplified approach without actual embeddings
-            // In production, you would configure an embedding model
+            // 使用内存存储初始化 SimpleKnowledge
+            // 注意：这是一个没有实际嵌入的简化方法
+            // 在生产环境中，你需要配置一个嵌入模型
             this.knowledge = SimpleKnowledge.builder()
                     .embeddingStore(InMemoryStore.builder().build())
                     .build();
@@ -81,7 +81,7 @@ public class KnowledgeBaseService {
     }
 
     /**
-     * Search knowledge base
+     * 搜索知识库
      */
     public List<String> search(String query) {
         log.debug("Searching knowledge base for: {}", query);
@@ -89,11 +89,11 @@ public class KnowledgeBaseService {
         List<String> results = new ArrayList<>();
 
         if (knowledge == null) {
-            // Fallback to simple text search
+            // 回退到简单文本搜索
             results.addAll(simpleTextSearch(query));
         } else {
-            // Would use RAG here in full implementation
-            // For now, use simple search
+            // 在完整实现中会使用 RAG
+            // 目前使用简单搜索
             results.addAll(simpleTextSearch(query));
         }
 
@@ -101,7 +101,7 @@ public class KnowledgeBaseService {
     }
 
     /**
-     * Simple text-based search (fallback when embeddings are not configured)
+     * 简单基于文本的搜索（当未配置嵌入模型时使用）
      */
     private List<String> simpleTextSearch(String query) {
         List<String> results = new ArrayList<>();
@@ -118,7 +118,7 @@ public class KnowledgeBaseService {
                         try {
                             String content = Files.readString(file);
 
-                            // Simple keyword matching
+                            // 简单关键词匹配
                             String[] keywords = query.toLowerCase().split("\\s+");
                             for (String keyword : keywords) {
                                 if (content.toLowerCase().contains(keyword)) {
@@ -139,7 +139,7 @@ public class KnowledgeBaseService {
     }
 
     /**
-     * Get knowledge base instance
+     * 获取知识库实例
      */
     public SimpleKnowledge getKnowledge() {
         return knowledge;

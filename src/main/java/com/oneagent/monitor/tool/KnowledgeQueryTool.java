@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Tool for querying knowledge base
+ * 查询知识库的工具类
  */
 @Slf4j
 @Component
@@ -21,7 +21,7 @@ public class KnowledgeQueryTool {
     private final KnowledgeBaseService knowledgeBaseService;
 
     /**
-     * Query knowledge base for business information
+     * 查询知识库获取业务信息
      */
     @Tool(description = "查询胜算云知识库获取业务信息。用于回答用户关于平台功能、计费模式、服务条款等问题。返回相关的知识库内容片段。")
     public String queryKnowledge(
@@ -49,7 +49,7 @@ public class KnowledgeQueryTool {
     }
 
     /**
-     * Search knowledge base by keyword
+     * 在知识库中搜索关键词
      */
     @Tool(description = "在知识库中搜索关键词。返回包含该关键词的所有知识条目。")
     public String searchByKeyword(String keyword) {

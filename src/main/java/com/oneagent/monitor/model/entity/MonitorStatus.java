@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Monitor status entity
+ * 监控状态实体类
  */
 @Data
 @Builder
@@ -15,27 +15,27 @@ import lombok.NoArgsConstructor;
 public class MonitorStatus {
 
     /**
-     * API status code (e.g., "200 OK", "500 Internal Server Error")
+     * API 状态码（例如："200 OK"、"500 Internal Server Error"）
      */
     private String status;
 
     /**
-     * Response time (e.g., "120ms", "Timeout")
+     * 响应时间（例如："120ms"、"Timeout"）
      */
     private String responseTime;
 
     /**
-     * Whether system is healthy
+     * 系统是否健康
      */
     private boolean healthy;
 
     /**
-     * Number of recent errors
+     * 最近的错误数量
      */
     private int errorCount;
 
     /**
-     * Timestamp of last check
+     * 最后一次检查的时间戳
      */
     private String lastCheckTime;
 }

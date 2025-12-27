@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Action triggered DTO for tracking system actions
+ * 跟踪系统动作的触发动作 DTO
  */
 @Data
 @Builder
@@ -16,13 +16,13 @@ import lombok.NoArgsConstructor;
 public class ActionTriggered {
 
     /**
-     * Feishu webhook status
+     * 飞书 Webhook 状态
      */
     @JsonProperty("feishu_webhook")
     private String feishuWebhook;
 
     /**
-     * Apifox document ID
+     * Apifox 文档 ID
      */
     @JsonProperty("apifox_doc_id")
     private String apifoxDocId;

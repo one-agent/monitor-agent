@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Configuration properties for Monitor Agent
+ * Monitor Agent 的配置属性
  */
 @Data
 @Configuration
@@ -13,32 +13,32 @@ import org.springframework.context.annotation.Configuration;
 public class MonitorProperties {
 
     /**
-     * LLM API configuration
+     * LLM API 配置
      */
     private LlmConfig llm = new LlmConfig();
 
     /**
-     * Feishu webhook configuration
+     * 飞书 Webhook 配置
      */
     private FeishuConfig feishu = new FeishuConfig();
 
     /**
-     * Apifox API configuration
+     * Apifox API 配置
      */
     private ApifoxConfig apifox = new ApifoxConfig();
 
     /**
-     * Knowledge base configuration
+     * 知识库配置
      */
     private KnowledgeConfig knowledge = new KnowledgeConfig();
 
     /**
-     * Input/Output path configuration
+     * 输入/输出路径配置
      */
     private PathConfig path = new PathConfig();
 
     /**
-     * LLM Configuration
+     * LLM 配置
      */
     @Data
     public static class LlmConfig {
@@ -51,7 +51,7 @@ public class MonitorProperties {
     }
 
     /**
-     * Feishu Configuration
+     * 飞书配置
      */
     @Data
     public static class FeishuConfig {
@@ -59,7 +59,7 @@ public class MonitorProperties {
     }
 
     /**
-     * Apifox Configuration
+     * Apifox 配置
      */
     @Data
     public static class ApifoxConfig {
@@ -70,7 +70,7 @@ public class MonitorProperties {
     }
 
     /**
-     * Knowledge Configuration
+     * 知识库配置
      */
     @Data
     public static class KnowledgeConfig {
@@ -78,7 +78,7 @@ public class MonitorProperties {
     }
 
     /**
-     * Path Configuration
+     * 路径配置
      */
     @Data
     public static class PathConfig {

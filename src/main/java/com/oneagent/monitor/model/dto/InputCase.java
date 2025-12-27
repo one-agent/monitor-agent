@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Input case DTO for processing user queries
+ * 处理用户查询的输入用例 DTO
  */
 @Data
 @NoArgsConstructor
@@ -16,31 +16,31 @@ import java.util.List;
 public class InputCase {
 
     /**
-     * Unique case identifier
+     * 唯一的用例标识符
      */
     @JsonProperty("case_id")
     private String caseId;
 
     /**
-     * User query/question
+     * 用户查询/问题
      */
     @JsonProperty("user_query")
     private String userQuery;
 
     /**
-     * Current API status
+     * 当前的 API 状态
      */
     @JsonProperty("api_status")
     private String apiStatus;
 
     /**
-     * API response time
+     * API 响应时间
      */
     @JsonProperty("api_response_time")
     private String apiResponseTime;
 
     /**
-     * Monitor log entries
+     * 监控日志条目
      */
     @JsonProperty("monitor_log")
     private List<MonitorLog> monitorLog;

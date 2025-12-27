@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Monitor log entry DTO
+ * 监控日志条目 DTO
  */
 @Data
 @Builder
@@ -16,19 +16,19 @@ import lombok.NoArgsConstructor;
 public class MonitorLog {
 
     /**
-     * Timestamp of log entry
+     * 日志条目的时间戳
      */
     @JsonProperty("timestamp")
     private String timestamp;
 
     /**
-     * Status (e.g., "Error", "OK")
+     * 状态（例如："Error"、"OK"）
      */
     @JsonProperty("status")
     private String status;
 
     /**
-     * Error or status message
+     * 错误或状态消息
      */
     @JsonProperty("msg")
     private String msg;

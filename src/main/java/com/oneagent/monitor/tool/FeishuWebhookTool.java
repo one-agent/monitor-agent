@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Tool for sending Feishu webhook alerts
+ * 发送飞书 Webhook 告警的工具类
  */
 @Slf4j
 @Component
@@ -31,7 +31,7 @@ public class FeishuWebhookTool {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Send Feishu alert when API error is detected
+     * 检测到 API 错误时发送飞书告警
      */
     @Tool(description = "发送飞书告警通知。当系统检测到 API 异常时调用此工具。消息包含报错时间、错误代码和当前延迟。")
     public String sendFeishuAlert(
@@ -94,14 +94,14 @@ public class FeishuWebhookTool {
     }
 
     /**
-     * Send alert with specified timestamp
+     * 使用指定时间戳发送告警
      */
     public String sendFeishuAlert(String timestamp, String errorCode, String latency) {
         return sendFeishuAlert(null, timestamp, errorCode, latency);
     }
 
     /**
-     * Send alert with current timestamp
+     * 使用当前时间戳发送告警
      */
     public String sendFeishuAlert(String errorCode, String latency) {
         return sendFeishuAlert(null, LocalDateTime.now().format(TIME_FORMATTER), errorCode, latency);

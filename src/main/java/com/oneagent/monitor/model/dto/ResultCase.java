@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Result case DTO for output
+ * 输出结果用例 DTO
  */
 @Data
 @NoArgsConstructor
@@ -14,19 +14,19 @@ import lombok.NoArgsConstructor;
 public class ResultCase {
 
     /**
-     * Unique case identifier
+     * 唯一的用例标识符
      */
     @JsonProperty("case_id")
     private String caseId;
 
     /**
-     * Agent's reply to user query
+     * Agent 对用户查询的回复
      */
     @JsonProperty("reply")
     private String reply;
 
     /**
-     * Actions triggered during processing
+     * 处理期间触发的动作
      */
     @JsonProperty("action_triggered")
     private ActionTriggered actionTriggered;

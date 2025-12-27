@@ -17,7 +17,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Agent configuration class
+ * Agent 配置类
  */
 @Slf4j
 @Configuration
@@ -31,7 +31,7 @@ public class AgentConfig {
     private final KnowledgeQueryTool knowledgeQueryTool;
 
     /**
-     * Create OpenAI-compatible chat model
+     * 创建兼容 OpenAI 的聊天模型
      */
     @Bean
     public OpenAIChatModel chatModel() {
@@ -53,7 +53,7 @@ public class AgentConfig {
     }
 
     /**
-     * Create toolkit with all registered tools
+     * 创建包含所有注册工具的工具包
      */
     @Bean
     public Toolkit toolkit() {
@@ -61,7 +61,7 @@ public class AgentConfig {
 
         Toolkit toolkit = new Toolkit();
 
-        // Register tool instances
+        // 注册工具实例
         toolkit.registerTool(feishuWebhookTool);
         toolkit.registerTool(apifoxApiTool);
         toolkit.registerTool(monitorCheckTool);
@@ -73,7 +73,7 @@ public class AgentConfig {
     }
 
     /**
-     * Create ReActAgent with all configurations
+     * 创建包含所有配置的 ReActAgent
      */
     @Bean
     public ReActAgent customerServiceAgent(OpenAIChatModel chatModel, Toolkit toolkit) {
@@ -92,7 +92,7 @@ public class AgentConfig {
     }
 
     /**
-     * Build system prompt for agent
+     * 构建 Agent 的系统提示词
      */
     private String buildSystemPrompt() {
         return """

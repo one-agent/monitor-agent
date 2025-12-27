@@ -17,7 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 /**
- * Tool for creating Apifox documents
+ * 创建 Apifox 文档的工具类
  */
 @Slf4j
 @Component
@@ -32,7 +32,7 @@ public class ApifoxApiTool {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Create Apifox document for fault recording
+     * 创建 Apifox 故障记录文档
      */
     @Tool(description = "创建 Apifox 故障记录文档。当系统发生异常时调用此工具记录故障。文档标题格式：[故障记录] YYYY-MM-DD HH:mm:ss。")
     public String createApifoxDocument(
@@ -49,7 +49,7 @@ public class ApifoxApiTool {
         String projectId = monitorProperties.getApifox().getProjectId();
         String folderId = monitorProperties.getApifox().getFolderId();
 
-        // Check if configured
+        // 检查是否已配置
         if (apiToken == null || apiToken.contains("your-apifox-token-here") ||
             projectId == null || projectId.contains("your-project-id-here")) {
             String docId = "DOC_" + UUID.randomUUID().toString().substring(0, 8);
@@ -63,7 +63,7 @@ public class ApifoxApiTool {
             String docTitle = "[故障记录] " + LocalDateTime.now().format(DOC_TIME_FORMATTER);
             String docId = generateDocId(errorCode);
 
-            // Prepare request body for Apifox API
+            // 准备 Apifox API 请求体
             ObjectNode requestBody = objectMapper.createObjectNode();
             requestBody.put("project_id", projectId);
             requestBody.put("folder_id", folderId);
@@ -73,7 +73,7 @@ public class ApifoxApiTool {
             ObjectNode content = requestBody.putObject("content");
             content.put("markdown", buildDocContent(timestamp, errorCode, errorMsg, latency));
 
-            // Note: Actual Apifox API endpoint may vary
+            // 注意：实际的 Apifox API 端点可能会有所不同
             String apiUrl = monitorProperties.getApifox().getApiUrl() + "/v1/projects/" + projectId + "/docs";
 
             RequestBody body = RequestBody.create(requestBody.toString(), JSON);
@@ -92,7 +92,7 @@ public class ApifoxApiTool {
                     log.error("Failed to create Apifox document: {}", response.code());
                     String responseBody = response.body() != null ? response.body().string() : "no response";
                     log.debug("Response: {}", responseBody);
-                    // Return simulated doc ID even if API call fails
+                    // 即使 API 调用失败也返回模拟的文档 ID
                     return docId;
                 }
             }
@@ -103,14 +103,14 @@ public class ApifoxApiTool {
     }
 
     /**
-     * Create document with specified timestamp
+     * 使用指定时间戳创建文档
      */
     public String createApifoxDocument(String timestamp, String errorCode, String errorMsg, String latency) {
         return createApifoxDocument(null, timestamp, errorCode, errorMsg, latency);
     }
 
     /**
-     * Create document with current timestamp
+     * 使用当前时间戳创建文档
      */
     public String createApifoxDocument(String errorCode, String errorMsg, String latency) {
         return createApifoxDocument(null,
@@ -121,7 +121,7 @@ public class ApifoxApiTool {
     }
 
     /**
-     * Generate document ID from error code
+     * 根据错误代码生成文档 ID
      */
     private String generateDocId(String errorCode) {
         String cleanCode = errorCode.replaceAll("[^A-Za-z0-9]", "_");
@@ -130,7 +130,7 @@ public class ApifoxApiTool {
     }
 
     /**
-     * Build document content in markdown format
+     * 构建Markdown格式的文档内容
      */
     private String buildDocContent(String timestamp, String errorCode, String errorMsg, String latency) {
         return String.format("""

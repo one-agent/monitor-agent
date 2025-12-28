@@ -2,7 +2,6 @@ package com.oneagent.monitor.tool;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolExecutionContext;
 import com.oneagent.monitor.model.config.MonitorProperties;
@@ -24,7 +23,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ApifoxApiTool {
 
-    private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
+    private static final MediaType FORM = MediaType.get("application/x-www-form-urlencoded;charset=UTF-8");
     private static final DateTimeFormatter DOC_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final MonitorProperties monitorProperties;
@@ -44,16 +43,17 @@ public class ApifoxApiTool {
     ) {
         log.info("Creating Apifox document: time={}, code={}, msg={}, latency={}",
                 timestamp, errorCode, errorMsg, latency);
-
         String apiToken = monitorProperties.getApifox().getApiToken();
         String projectId = monitorProperties.getApifox().getProjectId();
         String folderId = monitorProperties.getApifox().getFolderId();
+        String moduleId = monitorProperties.getApifox().getModuleId();
 
         // 调试：打印实际配置值
-        log.info("Apifox Config - Token: [{}], ProjectId: [{}], FolderId: [{}]",
+        log.info("Apifox Config - Token: [{}], ProjectId: [{}], FolderId: [{}], ModuleId: [{}]",
                 apiToken != null ? "***" + apiToken.substring(0, Math.min(10, apiToken.length())) + "***" : "null",
                 projectId,
-                folderId);
+                folderId,
+                moduleId);
 
         // 检查是否已配置
         if (apiToken == null || apiToken.contains("your-apifox-token-here") ||
@@ -69,43 +69,46 @@ public class ApifoxApiTool {
             String docTitle = "[故障记录] " + LocalDateTime.now().format(DOC_TIME_FORMATTER);
             String docId = generateDocId(errorCode);
 
-            // 准备 Apifox API 请求体
-            ObjectNode requestBody = objectMapper.createObjectNode();
-            requestBody.put("project_id", projectId);
-            // 临时禁用 folder_id，让文档创建在项目根目录方便查找
-             if (folderId != null && !folderId.trim().isEmpty()) {
-                 requestBody.put("folder_id", folderId);
-             }
-            requestBody.put("name", docTitle);
-            requestBody.put("type", "doc"); // 改为 doc 类型
+            // 使用 form-urlencoded 格式构建请求体
+            String formData = buildFormData(docTitle, folderId, moduleId, timestamp, errorCode, errorMsg, latency);
 
-            ObjectNode content = requestBody.putObject("content");
-            content.put("markdown", buildDocContent(timestamp, errorCode, errorMsg, latency));
-
-            // 注意：实际的 Apifox API 端点可能会有所不同
-            String apiUrl = monitorProperties.getApifox().getApiUrl() + "/api/v1/doc/" + projectId;
+            // Apifox API 端点（根据实际 curl 命令）
+            String apiUrl = monitorProperties.getApifox().getApiUrl() + "/api/v1/doc?locale=zh-CN";
             log.info("Apifox API Request - URL: {}, folder_id: {}, title: {}", apiUrl, folderId, docTitle);
 
-            RequestBody body = RequestBody.create(requestBody.toString(), JSON);
-            log.info("Apifox Request Body: {}", requestBody);
+            RequestBody body = RequestBody.create(formData, FORM);
+            log.info("Apifox Request Body: {}", formData);
+
             Request request = new Request.Builder()
                     .url(apiUrl)
                     .addHeader("Authorization", "Bearer " + apiToken)
-                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
+                    .addHeader("Accept", "application/json")
+                    .addHeader("x-project-id", projectId)
                     .post(body)
                     .build();
 
             try (Response response = httpClient.newCall(request).execute()) {
                 log.info("Apifox Response - Code: {}, Success: {}, Message: {}",
                         response.code(), response.isSuccessful(), response.message());
-                if (response.isSuccessful()) {
-                    log.info("Apifox document created successfully: {}", docId);
+
+                if (response.isSuccessful() && response.body() != null) {
+                    String responseBody = response.body().string();
+                    log.info("Apifox Response Body: {}", responseBody);
+
+                    // 解析响应获取文档 ID
+                    JsonNode jsonNode = objectMapper.readTree(responseBody);
+                    if (jsonNode.has("success") && jsonNode.get("success").asBoolean() &&
+                        jsonNode.has("data") && jsonNode.get("data").has("id")) {
+                        String actualDocId = jsonNode.get("data").get("id").asText();
+                        log.info("Apifox document created successfully: {}", actualDocId);
+                        return actualDocId;
+                    }
                     return docId;
                 } else {
                     log.error("Failed to create Apifox document: code={}, message={}", response.code(), response.message());
                     String responseBody = response.body() != null ? response.body().string() : "no response";
                     log.error("Apifox Response Body: {}", responseBody);
-                    // 即使 API 调用失败也返回模拟的文档 ID
                     return docId;
                 }
             }
@@ -140,6 +143,40 @@ public class ApifoxApiTool {
         String cleanCode = errorCode.replaceAll("[^A-Za-z0-9]", "_");
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         return "DOC_" + timestamp + "_" + cleanCode;
+    }
+
+    /**
+     * 构建 form-urlencoded 格式的请求体
+     */
+    private String buildFormData(String docTitle, String folderId, String moduleId,
+                                  String timestamp, String errorCode, String errorMsg, String latency) {
+        StringBuilder formData = new StringBuilder();
+        formData.append("name=").append(urlEncode(docTitle));
+
+        if (moduleId != null && !moduleId.trim().isEmpty()) {
+            formData.append("&moduleId=").append(urlEncode(moduleId));
+        }
+
+        // 构建文档内容（markdown 格式）
+        String markdownContent = buildDocContent(timestamp, errorCode, errorMsg, latency);
+        formData.append("&content=").append(urlEncode(markdownContent));
+
+        if (folderId != null && !folderId.trim().isEmpty()) {
+            formData.append("&folderId=").append(urlEncode(folderId));
+        }
+
+        return formData.toString();
+    }
+
+    /**
+     * URL 编码
+     */
+    private String urlEncode(String value) {
+        try {
+            return java.net.URLEncoder.encode(value, "UTF-8");
+        } catch (java.io.UnsupportedEncodingException e) {
+            return value;
+        }
     }
 
     /**

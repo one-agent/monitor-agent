@@ -71,6 +71,9 @@ public class MonitorProperties {
         private String apiToken;
         private String projectId;
         private String folderId;
+        private String moduleId;
+        private String branchId;
+        private String deviceId;
     }
 
     /**

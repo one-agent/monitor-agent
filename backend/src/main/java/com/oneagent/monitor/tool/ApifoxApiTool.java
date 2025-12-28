@@ -49,6 +49,12 @@ public class ApifoxApiTool {
         String projectId = monitorProperties.getApifox().getProjectId();
         String folderId = monitorProperties.getApifox().getFolderId();
 
+        // 调试：打印实际配置值
+        log.info("Apifox Config - Token: [{}], ProjectId: [{}], FolderId: [{}]",
+                apiToken != null ? "***" + apiToken.substring(0, Math.min(10, apiToken.length())) + "***" : "null",
+                projectId,
+                folderId);
+
         // 检查是否已配置
         if (apiToken == null || apiToken.contains("your-apifox-token-here") ||
             projectId == null || projectId.contains("your-project-id-here")) {
@@ -66,17 +72,22 @@ public class ApifoxApiTool {
             // 准备 Apifox API 请求体
             ObjectNode requestBody = objectMapper.createObjectNode();
             requestBody.put("project_id", projectId);
-            requestBody.put("folder_id", folderId);
+            // 临时禁用 folder_id，让文档创建在项目根目录方便查找
+             if (folderId != null && !folderId.trim().isEmpty()) {
+                 requestBody.put("folder_id", folderId);
+             }
             requestBody.put("name", docTitle);
-            requestBody.put("type", "api"); // or "doc" for documentation
+            requestBody.put("type", "doc"); // 改为 doc 类型
 
             ObjectNode content = requestBody.putObject("content");
             content.put("markdown", buildDocContent(timestamp, errorCode, errorMsg, latency));
 
             // 注意：实际的 Apifox API 端点可能会有所不同
-            String apiUrl = monitorProperties.getApifox().getApiUrl() + "/v1/projects/" + projectId + "/docs";
+            String apiUrl = monitorProperties.getApifox().getApiUrl() + "/api/v1/doc/" + projectId;
+            log.info("Apifox API Request - URL: {}, folder_id: {}, title: {}", apiUrl, folderId, docTitle);
 
             RequestBody body = RequestBody.create(requestBody.toString(), JSON);
+            log.info("Apifox Request Body: {}", requestBody);
             Request request = new Request.Builder()
                     .url(apiUrl)
                     .addHeader("Authorization", "Bearer " + apiToken)
@@ -85,13 +96,15 @@ public class ApifoxApiTool {
                     .build();
 
             try (Response response = httpClient.newCall(request).execute()) {
+                log.info("Apifox Response - Code: {}, Success: {}, Message: {}",
+                        response.code(), response.isSuccessful(), response.message());
                 if (response.isSuccessful()) {
                     log.info("Apifox document created successfully: {}", docId);
                     return docId;
                 } else {
-                    log.error("Failed to create Apifox document: {}", response.code());
+                    log.error("Failed to create Apifox document: code={}, message={}", response.code(), response.message());
                     String responseBody = response.body() != null ? response.body().string() : "no response";
-                    log.debug("Response: {}", responseBody);
+                    log.error("Apifox Response Body: {}", responseBody);
                     // 即使 API 调用失败也返回模拟的文档 ID
                     return docId;
                 }

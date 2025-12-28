@@ -31,6 +31,10 @@ public class MonitorProperties {
      * 知识库配置
      */
     private KnowledgeConfig knowledge = new KnowledgeConfig();
+    /**
+     * Studio 配置
+     */
+    private StudioConfig studio = new StudioConfig();
 
     /**
      * 输入/输出路径配置
@@ -84,5 +88,31 @@ public class MonitorProperties {
     public static class PathConfig {
         private String inputPath = "inputs/inputs.json";
         private String outputPath = "outputs/results.json";
+    }
+
+    /**
+     * Studio 配置
+     */
+    @Data
+    public static class StudioConfig {
+        /**
+         * 是否启用 Studio 支持
+         */
+        private boolean enabled = false;
+
+        /**
+         * Studio 服务端 URL
+         */
+        private String studioUrl = "http://localhost:3000";
+
+        /**
+         * 项目名称（用于 Studio 中的项目标识）
+         */
+        private String projectName = "MonitorAgent";
+
+        /**
+         * 运行名称（用于区分不同的 Agent）
+         */
+        private String runName = "demo_";
     }
 }

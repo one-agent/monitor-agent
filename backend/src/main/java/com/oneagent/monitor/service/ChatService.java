@@ -94,7 +94,7 @@ public class ChatService {
      */
     private ActionTriggered handleApiAlert(InputCase inputCase) {
         log.warn("API 告警触发，用例 {}: status={}, time={}",
-                inputCase.getCaseId(), inputCase.getApiResponseTime());
+                inputCase.getCaseId(), inputCase.getApiStatus() ,inputCase.getApiResponseTime());
 
         ActionTriggered.ActionTriggeredBuilder actions = ActionTriggered.builder();
 
@@ -140,9 +140,8 @@ public class ChatService {
                     .textContent(query)
                     .build();
 
-            // 正确使用 Reactor 的 Mono
-            Msg response = Mono.from(customerServiceAgent.call(message))
-                    .block();
+            // 直接使用 Agent 的 block() 方法，让 StudioMessageHook 能正常追踪
+            Msg response = customerServiceAgent.call(message).block();
 
             if (response != null) {
                 String reply = response.getTextContent();

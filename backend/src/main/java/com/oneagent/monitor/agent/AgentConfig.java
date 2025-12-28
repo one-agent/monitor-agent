@@ -10,11 +10,14 @@ import io.agentscope.core.formatter.openai.OpenAIChatFormatter;
 import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.OpenAIChatModel;
+import io.agentscope.core.studio.StudioManager;
+import io.agentscope.core.studio.StudioMessageHook;
 import io.agentscope.core.tool.Toolkit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 
 /**
  * Agent 配置类
@@ -22,6 +25,7 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
+@DependsOn("studioInitializer")  // 确保 Studio 先初始化
 public class AgentConfig {
 
     private final MonitorProperties monitorProperties;
@@ -81,14 +85,26 @@ public class AgentConfig {
 
         String systemPrompt = buildSystemPrompt();
 
-        return ReActAgent.builder()
+        ReActAgent.Builder builder = ReActAgent.builder()
                 .name("CustomerServiceAgent")
                 .model(chatModel)
                 .sysPrompt(systemPrompt)
                 .memory(new InMemoryMemory())
                 .toolkit(toolkit)
-                .maxIters(10)
-                .build();
+                .maxIters(10);
+
+        // 添加 Studio 集成 Hook
+        if (monitorProperties.getStudio().isEnabled()) {
+            log.info("Studio is enabled, adding StudioMessageHook to agent");
+            try {
+                // StudioMessageHook - 用于记录消息到 Studio UI
+                builder.hook(new StudioMessageHook(StudioManager.getClient()));
+            } catch (Exception e) {
+                log.warn("Failed to add StudioMessageHook (Studio may not be initialized): {}", e.getMessage());
+            }
+        }
+
+        return builder.build();
     }
 
     /**

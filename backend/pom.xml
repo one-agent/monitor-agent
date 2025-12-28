@@ -13,14 +13,14 @@
     </parent>
 
     <groupId>com.oneagent</groupId>
-    <artifactId>monitor-agent</artifactId>
+    <artifactId>monitor-agent-backend</artifactId>
     <version>1.0.0</version>
-    <name>Monitor Agent</name>
+    <name>Monitor Agent backend</name>
     <description>Intelligent Customer Service Monitor Agent with AgentScope Java</description>
 
     <properties>
         <java.version>17</java.version>
-        <revision>1.0.3</revision>
+        <agentscope.version>1.0.4</agentscope.version>
     </properties>
 
     <dependencies>
@@ -28,12 +28,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-
-        <!-- Spring Boot WebFlux for Reactive Support -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
 
         <!-- Spring Boot Configuration Processor -->
@@ -47,14 +41,12 @@
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope</artifactId>
-            <version>${revision}</version>
         </dependency>
 
         <!-- OpenAI SDK for AgentScope compatibility -->
         <dependency>
             <groupId>com.openai</groupId>
             <artifactId>openai-java</artifactId>
-            <version>4.13.0</version>
         </dependency>
 
         <!-- OkHttp4 for HTTP Client -->
@@ -95,7 +87,37 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
         </dependency>
+
+        <!-- AgentScope Studio Extension -->
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-studio</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
     </dependencies>
+
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.agentscope</groupId>
+                <artifactId>agentscope-dependencies-bom</artifactId>
+                <version>${agentscope.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.agentscope</groupId>
+                <artifactId>agentscope-bom</artifactId>
+                <version>${agentscope.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <repositories>
         <!-- Maven Central -->

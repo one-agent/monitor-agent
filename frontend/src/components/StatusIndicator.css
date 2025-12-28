@@ -1,0 +1,62 @@
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+}
+
+.status-indicator.loading {
+  color: #666;
+}
+
+.status-indicator.healthy {
+  border-left: 3px solid #52c41a;
+  color: #52c41a;
+}
+
+.status-indicator.unhealthy {
+  border-left: 3px solid #ff4d4f;
+  color: #ff4d4f;
+}
+
+.status-dot {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.status-dot.healthy {
+  color: #52c41a;
+}
+
+.status-dot.unhealthy {
+  color: #ff4d4f;
+}
+
+.status-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.status-text {
+  font-weight: 500;
+}
+
+.status-detail {
+  color: #666;
+}
+
+.status-error {
+  color: #ff4d4f;
+  font-weight: 500;
+}
+
+.status-time {
+  color: #999;
+  font-size: 0.75rem;
+}

@@ -1,4 +1,4 @@
-backend/target/
+**/target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -55,3 +55,4 @@ logs/
 **/boba-tea-shop/supervisor-agent/**/static/
 **/boba-tea-shop/**/node_modules/
 **/boba-tea-shop/**/dist/
+**/node_modules/

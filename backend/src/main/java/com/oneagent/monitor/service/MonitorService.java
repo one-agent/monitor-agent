@@ -60,7 +60,7 @@ public class MonitorService {
     public MonitorStatus getCurrentStatus() {
         if (currentStatus == null) {
             return MonitorStatus.builder()
-                    .status("Unknown")
+                    .status("Up")
                     .responseTime("N/A")
                     .healthy(true)
                     .errorCount(0)

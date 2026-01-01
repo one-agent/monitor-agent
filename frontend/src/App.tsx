@@ -10,9 +10,9 @@ import type { MonitorLog } from './types';
 import './App.css';
 
 export default function App() {
-  const [monitorLogs, setMonitorLogs] = useState<MonitorLog[]>([]);
-  const [apiStatus, setApiStatus] = useState<string>('200 OK');
-  const [apiResponseTime, setApiResponseTime] = useState<string>('Unknown');
+  const [monitorLogs] = useState<MonitorLog[]>([]);
+  const [apiStatus] = useState<string>('200 OK');
+  const [apiResponseTime] = useState<string>('Unknown');
 
   return (
     <div className="app">

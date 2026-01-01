@@ -63,7 +63,7 @@ public class ChatService {
     /**
      * 构建带有上下文的查询供 Agent 使用
      */
-    private String buildContextualQuery(InputCase inputCase) {
+    public String buildContextualQuery(InputCase inputCase) {
         StringBuilder context = new StringBuilder();
 
         // 添加监控上下文
@@ -92,7 +92,7 @@ public class ChatService {
     /**
      * 通过发送通知处理 API 告警
      */
-    private ActionTriggered handleApiAlert(InputCase inputCase) {
+    public ActionTriggered handleApiAlert(InputCase inputCase) {
         log.warn("API 告警触发，用例 {}: status={}, time={}",
                 inputCase.getCaseId(), inputCase.getApiStatus() ,inputCase.getApiResponseTime());
 

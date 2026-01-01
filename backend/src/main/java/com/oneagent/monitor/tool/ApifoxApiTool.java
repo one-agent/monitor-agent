@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolExecutionContext;
+import io.agentscope.core.tool.ToolParam;
 import com.oneagent.monitor.model.config.MonitorProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,13 +34,13 @@ public class ApifoxApiTool {
     /**
      * 创建 Apifox 故障记录文档
      */
-    @Tool(description = "创建 Apifox 故障记录文档。当系统发生异常时调用此工具记录故障。文档标题格式：[故障记录] YYYY-MM-DD HH:mm:ss。")
+    @Tool(name = "create_apifox_document", description = "创建 Apifox 故障记录文档。当系统发生异常时调用此工具记录故障。文档标题格式：[故障记录] YYYY-MM-DD HH:mm:ss。")
     public String createApifoxDocument(
             ToolExecutionContext context,
-            String timestamp,
-            String errorCode,
-            String errorMsg,
-            String latency
+            @ToolParam(name = "timestamp", description = "故障发生的时间戳") String timestamp,
+            @ToolParam(name = "errorCode", description = "故障错误代码") String errorCode,
+            @ToolParam(name = "errorMsg", description = "详细的错误信息") String errorMsg,
+            @ToolParam(name = "latency", description = "当前的系统响应延迟") String latency
     ) {
         log.info("Creating Apifox document: time={}, code={}, msg={}, latency={}",
                 timestamp, errorCode, errorMsg, latency);
@@ -55,6 +56,7 @@ public class ApifoxApiTool {
                 folderId,
                 moduleId);
 
+        String result;
         // 检查是否已配置
         if (apiToken == null || apiToken.contains("your-apifox-token-here") ||
             projectId == null || projectId.contains("your-project-id-here")) {
@@ -62,7 +64,8 @@ public class ApifoxApiTool {
             String msg = String.format("Apifox API not fully configured. Simulation: docId=%s, time=%s, code=%s",
                     docId, timestamp, errorCode);
             log.warn(msg);
-            return docId;
+            result = docId;
+            return wrapResult(result);
         }
 
         try {
@@ -102,19 +105,31 @@ public class ApifoxApiTool {
                         jsonNode.has("data") && jsonNode.get("data").has("id")) {
                         String actualDocId = jsonNode.get("data").get("id").asText();
                         log.info("Apifox document created successfully: {}", actualDocId);
-                        return actualDocId;
+                        result = actualDocId;
+                    } else {
+                        result = docId;
                     }
-                    return docId;
                 } else {
                     log.error("Failed to create Apifox document: code={}, message={}", response.code(), response.message());
                     String responseBody = response.body() != null ? response.body().string() : "no response";
                     log.error("Apifox Response Body: {}", responseBody);
-                    return docId;
+                    result = docId;
                 }
             }
         } catch (IOException e) {
             log.error("Error creating Apifox document", e);
-            return generateDocId(errorCode);
+            result = generateDocId(errorCode);
+        }
+        
+        return wrapResult(result);
+    }
+    
+    private String wrapResult(String result) {
+        try {
+            return String.format("{\"__tool_name__\": \"create_apifox_document\", \"result\": %s}", 
+                    objectMapper.writeValueAsString(result));
+        } catch (Exception e) {
+             return String.format("{\"__tool_name__\": \"create_apifox_document\", \"result\": \"%s\"}", result);
         }
     }
 

@@ -7,6 +7,8 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  reasoning?: string; // 思考过程内容
+  isThinkingDone?: boolean; // 思考是否完成
 }
 
 export interface MonitorLog {
@@ -49,3 +51,30 @@ export interface MonitorStatus {
   errorCount: number;
   lastCheckTime: string;
 }
+
+/**
+ * SSE 事件类型
+ */
+export type SseEventType = 'reasoning' | 'tool_result' | 'hint' | 'complete' | 'error' | 'agent_result' | 'unknown';
+
+/**
+ * SSE 事件数据
+ */
+export interface SseEvent {
+  event: SseEventType;
+  data: string;
+  caseId?: string;
+  toolName?: string;
+  actionTriggered?: ActionTriggered;
+}
+
+/**
+ * 流式请求处理函数类型
+ */
+export type StreamRequestHandler = (
+  data: ProcessRequest,
+  onChunk: (chunk: string) => void,
+  onComplete: (result?: ProcessResponse) => void,
+  onError: (error: Error) => void,
+  onReasoning?: (reasoning: string) => void
+) => void;

@@ -44,4 +44,6 @@ public class InputCase {
      */
     @JsonProperty("monitor_log")
     private List<MonitorLog> monitorLog;
+
+
 }

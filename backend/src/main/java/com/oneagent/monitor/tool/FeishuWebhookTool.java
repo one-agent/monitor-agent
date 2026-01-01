@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolExecutionContext;
+import io.agentscope.core.tool.ToolParam;
 import com.oneagent.monitor.model.config.MonitorProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,12 +34,12 @@ public class FeishuWebhookTool {
     /**
      * 检测到 API 错误时发送飞书告警
      */
-    @Tool(description = "发送飞书告警通知。当系统检测到 API 异常时调用此工具。消息包含报错时间、错误代码和当前延迟。")
+    @Tool(name = "send_feishu_alert", description = "发送飞书告警通知。当系统检测到 API 异常时调用此工具。消息包含报错时间、错误代码和当前延迟。")
     public String sendFeishuAlert(
             ToolExecutionContext context,
-            String timestamp,
-            String errorCode,
-            String latency
+            @ToolParam(name = "timestamp", description = "告警发生的时间戳") String timestamp,
+            @ToolParam(name = "errorCode", description = "异常的错误代码") String errorCode,
+            @ToolParam(name = "latency", description = "当前的系统响应延迟") String latency
     ) {
         log.info("Sending Feishu alert: time={}, code={}, latency={}", timestamp, errorCode, latency);
 
@@ -79,13 +80,16 @@ public class FeishuWebhookTool {
                     .build();
 
             try (Response response = httpClient.newCall(request).execute()) {
+                String result;
                 if (response.isSuccessful()) {
                     log.info("Feishu alert sent successfully");
-                    return "Sent success";
+                    result = "Sent success";
                 } else {
                     log.error("Failed to send Feishu alert: {}", response.code());
-                    return "Failed: " + response.code();
+                    result = "Failed: " + response.code();
                 }
+                return String.format("{\"__tool_name__\": \"send_feishu_alert\", \"result\": %s}", 
+                        objectMapper.writeValueAsString(result));
             }
         } catch (IOException e) {
             log.error("Error sending Feishu alert", e);

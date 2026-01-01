@@ -8,7 +8,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.0</version>
+        <version>4.0.1</version>
         <relativePath/>
     </parent>
 
@@ -20,14 +20,14 @@
 
     <properties>
         <java.version>17</java.version>
-        <agentscope.version>1.0.4</agentscope.version>
+        <agentscope.version>1.0.5</agentscope.version>
     </properties>
 
     <dependencies>
-        <!-- Spring Boot Web -->
+        <!-- Spring Boot WebFlux -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
 
         <!-- Spring Boot Configuration Processor -->
@@ -37,10 +37,10 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- AgentScope Java SDK -->
+        <!-- AgentScope Spring Boot Starter -->
         <dependency>
             <groupId>io.agentscope</groupId>
-            <artifactId>agentscope</artifactId>
+            <artifactId>agentscope-spring-boot-starter</artifactId>
         </dependency>
 
         <!-- OpenAI SDK for AgentScope compatibility -->
@@ -97,6 +97,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+
     </dependencies>
 
 

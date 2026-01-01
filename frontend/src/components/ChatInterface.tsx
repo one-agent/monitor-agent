@@ -13,11 +13,59 @@ import {
   CopyOutlined,
   CheckOutlined
 } from '@ant-design/icons';
-import { sendChatMessage, processRequest } from '../services/api';
+import { processRequestStream } from '../services/api';
 import type { Message, MonitorLog } from '../types';
+import MarkdownText from './MarkdownText';
 import './ChatInterface.css';
 
 const { TextArea } = Input;
+
+// 可折叠的思考过程组件
+const ThinkingPanel = ({ reasoning, isThinkingDone }: { reasoning: string; isThinkingDone?: boolean }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isExpandedRef = useRef(isExpanded);
+
+  // 同步 ref 和 state
+  useEffect(() => {
+    isExpandedRef.current = isExpanded;
+  }, [isExpanded]);
+
+  // 当有内容时，默认展开（只在思考未完成时）
+  useEffect(() => {
+    if (!isExpandedRef.current && !isThinkingDone) {
+      setIsExpanded(true);
+    }
+  }, [isThinkingDone]);
+
+  // 当思考完成时，自动收起
+  useEffect(() => {
+    if (isThinkingDone && isExpandedRef.current) {
+      setIsExpanded(false);
+    }
+  }, [isThinkingDone]);
+
+  return (
+    <div className="thinking-panel">
+      <div 
+        className="thinking-header"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <span className="thinking-icon">💭</span>
+        <span className="thinking-title">
+          {isThinkingDone ? '思考过程' : '思考中...'}
+        </span>
+        <span className="thinking-toggle">
+          {isExpanded ? '▼' : '▶'}
+        </span>
+      </div>
+      {isExpanded && (
+        <div className="thinking-content">
+          <MarkdownText>{reasoning}</MarkdownText>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface ChatInterfaceProps {
   /**
@@ -43,8 +91,12 @@ export default function ChatInterface({
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [customApiStatus, setCustomApiStatus] = useState(apiStatus);
+  const [customApiResponseTime, setCustomApiResponseTime] = useState(apiResponseTime);
+  const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<any>(null);
 
   // Load saved messages from localStorage on mount
   useEffect(() => {
@@ -89,38 +141,111 @@ export default function ChatInterface({
     setInputValue('');
     setLoading(true);
 
+    // 立即聚焦到输入框
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+
+    // Create an empty assistant message upfront for streaming
+    const assistantMsgId = (Date.now() + 1).toString();
+    const assistantMsg: Message = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, assistantMsg]);
+
     try {
-      // Use /api/process for richer context with monitoring data
-      const response = await processRequest({
-        case_id: caseId,
-        user_query: content,
-        api_status: apiStatus,
-        api_response_time: apiResponseTime,
-        monitor_log: monitorLogs
-      });
+      // Use streaming API for real-time typewriter effect
+      await processRequestStream(
+        {
+          case_id: caseId,
+          user_query: content,
+          api_status: customApiStatus,
+          api_response_time: customApiResponseTime,
+          monitor_log: monitorLogs
+        },
+        // onChunk - update message content in real-time
+        (chunk: string) => {
+          // 使用函数式更新确保正确累积内容
+          setMessages(prev => {
+            const msgIndex = prev.findIndex(m => m.id === assistantMsgId);
+            if (msgIndex !== -1) {
+              const currentContent = prev[msgIndex].content;
+              const newContent = currentContent + chunk;
 
-      // Add assistant message
-      const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response.reply,
-        timestamp: new Date().toISOString()
-      };
-
-      setMessages(prev => [...prev, assistantMsg]);
+              const newMessages = [...prev];
+              newMessages[msgIndex] = { ...prev[msgIndex], content: newContent };
+              
+              // 如果接收到非工具结果的内容，且之前还没有标记为思考完成，则标记为完成
+              if (!chunk.startsWith('\n\n> 🔧') && !prev[msgIndex].isThinkingDone) {
+                newMessages[msgIndex] = { ...newMessages[msgIndex], isThinkingDone: true };
+              }
+              
+              return newMessages;
+            }
+            return prev;
+          });
+        },
+        // onComplete - streaming finished
+        () => {
+          // Result is already handled through chunks, just ensure loading state is updated
+          setLoading(false);
+          // Focus back on input
+          setTimeout(() => {
+            inputRef.current?.focus();
+          }, 0);
+        },
+        // onError - handle errors
+        (error: Error) => {
+          console.error('Error sending message:', error);
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === assistantMsgId
+                ? {
+                    ...msg,
+                    content: 'Sorry, there was an error processing your request. Please try again.'
+                  }
+                : msg
+            )
+          );
+          setLoading(false);
+          // Focus back on input
+          setTimeout(() => {
+            inputRef.current?.focus();
+          }, 0);
+        },
+        // onReasoning - handle reasoning content
+        (reasoning: string) => {
+          if (reasoning && reasoning.trim()) {
+            setMessages(prev => {
+              const msgIndex = prev.findIndex(m => m.id === assistantMsgId);
+              if (msgIndex !== -1) {
+                const newMessages = [...prev];
+                newMessages[msgIndex] = { ...prev[msgIndex], reasoning };
+                return newMessages;
+              }
+              return prev;
+            });
+          }
+        }
+      );
     } catch (error) {
       console.error('Error sending message:', error);
 
-      // Add error message
-      const errorMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'Sorry, there was an error processing your request. Please try again.',
-        timestamp: new Date().toISOString()
-      };
-
-      setMessages(prev => [...prev, errorMsg]);
-    } finally {
+      // Update the assistant message with error
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === assistantMsgId
+            ? {
+                ...msg,
+                content: 'Sorry, there was an error processing your request. Please try again.'
+              }
+            : msg
+        )
+      );
       setLoading(false);
       // Focus back on input
       setTimeout(() => {
@@ -190,8 +315,16 @@ export default function ChatInterface({
                         </span>
                       )}
                     </div>
+                    {msg.role === 'assistant' && msg.reasoning && msg.reasoning.trim() && (
+                      <ThinkingPanel 
+                        reasoning={msg.reasoning} 
+                        isThinkingDone={msg.isThinkingDone} 
+                      />
+                    )}
                     <div className="message-text">
-                      {msg.content}
+                      <MarkdownText>
+                        {msg.content}
+                      </MarkdownText>
                     </div>
                     <div className="message-footer">
                       <span className="message-time">
@@ -209,7 +342,7 @@ export default function ChatInterface({
                 </Card>
               </div>
             ))}
-            {loading && (
+            {loading && messages[messages.length - 1]?.role === 'assistant' && messages[messages.length - 1]?.content === '' && (
               <div className="message-wrapper assistant">
                 <Card className="message-bubble assistant loading" bordered={false}>
                   <div className="message-content">
@@ -219,7 +352,7 @@ export default function ChatInterface({
                       </span>
                     </div>
                     <div className="message-text">
-                      <Spin size="small" /> Thinking...
+                      <Spin size="small" /> <span className="typing-cursor">Typing</span>
                     </div>
                   </div>
                 </Card>
@@ -249,8 +382,66 @@ export default function ChatInterface({
       </div>
 
       <div className="input-container">
+        {/* 设置面板 */}
+        <div className="settings-panel">
+          <Button
+            type="text"
+            size="small"
+            onClick={() => setShowSettings(!showSettings)}
+            className="settings-toggle"
+          >
+            {showSettings ? '⬆️ 收起设置' : '⚙️ 测试设置'}
+          </Button>
+          
+          {showSettings && (
+            <div className="settings-content">
+              <div className="setting-item">
+                <label>API Status:</label>
+                <Input
+                  value={customApiStatus}
+                  onChange={(e) => setCustomApiStatus(e.target.value)}
+                  placeholder="例如: 500 Internal Server Error"
+                  size="small"
+                  className="setting-input"
+                />
+              </div>
+              <div className="setting-item">
+                <label>Response Time:</label>
+                <Input
+                  value={customApiResponseTime}
+                  onChange={(e) => setCustomApiResponseTime(e.target.value)}
+                  placeholder="例如: 5000ms"
+                  size="small"
+                  className="setting-input"
+                />
+              </div>
+              <div className="setting-presets">
+                <Button size="small" onClick={() => {
+                  setCustomApiStatus('200 OK');
+                  setCustomApiResponseTime('100ms');
+                }}>
+                  正常状态
+                </Button>
+                <Button size="small" onClick={() => {
+                  setCustomApiStatus('500 Internal Server Error');
+                  setCustomApiResponseTime('5000ms');
+                }}>
+                  服务器错误
+                </Button>
+                <Button size="small" onClick={() => {
+                  setCustomApiStatus('503 Service Unavailable');
+                  setCustomApiResponseTime('10000ms');
+                }}>
+                  服务不可用
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="input-wrapper">
           <TextArea
+            ref={inputRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyPress}

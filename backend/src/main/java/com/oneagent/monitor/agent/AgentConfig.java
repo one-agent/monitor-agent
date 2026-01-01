@@ -1,5 +1,6 @@
 package com.oneagent.monitor.agent;
 
+import com.oneagent.monitor.config.AgentScopeProperties;
 import com.oneagent.monitor.model.config.MonitorProperties;
 import com.oneagent.monitor.tool.ApifoxApiTool;
 import com.oneagent.monitor.tool.FeishuWebhookTool;
@@ -15,6 +16,7 @@ import io.agentscope.core.studio.StudioMessageHook;
 import io.agentscope.core.tool.Toolkit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
@@ -25,9 +27,11 @@ import org.springframework.context.annotation.DependsOn;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
+@EnableConfigurationProperties(AgentScopeProperties.class)
 @DependsOn("studioInitializer")  // 确保 Studio 先初始化
 public class AgentConfig {
 
+    private final AgentScopeProperties agentScopeProperties;
     private final MonitorProperties monitorProperties;
     private final FeishuWebhookTool feishuWebhookTool;
     private final ApifoxApiTool apifoxApiTool;
@@ -39,19 +43,34 @@ public class AgentConfig {
      */
     @Bean
     public OpenAIChatModel chatModel() {
+        // 优先使用 AgentScope 配置，如果没有则使用 Monitor 配置（向后兼容）
+        AgentScopeProperties.LlmConfig llmConfig = agentScopeProperties.getLlm();
+
+        // 如果 AgentScope 配置中的 API key 为空，则从 Monitor 配置中获取
+        if (llmConfig.getApiKey() == null || llmConfig.getApiKey().isEmpty()) {
+            MonitorProperties.LlmConfig monitorLlmConfig = monitorProperties.getLlm();
+            // 创建新的 AgentScope 配置对象并复制值
+            llmConfig.setApiKey(monitorLlmConfig.getApiKey());
+            llmConfig.setBaseUrl(monitorLlmConfig.getBaseUrl());
+            llmConfig.setModelName(monitorLlmConfig.getModelName());
+            llmConfig.setTemperature(monitorLlmConfig.getTemperature());
+            llmConfig.setMaxTokens(monitorLlmConfig.getMaxTokens());
+            llmConfig.setStream(monitorLlmConfig.getStream());
+        }
+
         log.info("Creating chat model: url={}, model={}",
-                monitorProperties.getLlm().getBaseUrl(),
-                monitorProperties.getLlm().getModelName());
+                llmConfig.getBaseUrl(),
+                llmConfig.getModelName());
 
         return OpenAIChatModel.builder()
-                .baseUrl(monitorProperties.getLlm().getBaseUrl())
-                .apiKey(monitorProperties.getLlm().getApiKey())
-                .modelName(monitorProperties.getLlm().getModelName())
-                .stream(monitorProperties.getLlm().getStream())
+                .baseUrl(llmConfig.getBaseUrl())
+                .apiKey(llmConfig.getApiKey())
+                .modelName(llmConfig.getModelName())
+                .stream(llmConfig.getStream())
                 .formatter(new OpenAIChatFormatter())
                 .defaultOptions(GenerateOptions.builder()
-                        .temperature(monitorProperties.getLlm().getTemperature())
-                        .maxTokens(monitorProperties.getLlm().getMaxTokens())
+                        .temperature(llmConfig.getTemperature())
+                        .maxTokens(llmConfig.getMaxTokens())
                         .build())
                 .build();
     }

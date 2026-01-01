@@ -42,7 +42,6 @@ public class WebFluxStreamingController implements InitializingBean {
     private final ChatService chatService;
     private final MonitorService monitorService;
     private final ReActAgent customerServiceAgent;
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private Path sessionPath;
     @Override
     public void afterPropertiesSet(){

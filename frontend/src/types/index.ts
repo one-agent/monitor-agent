@@ -9,6 +9,8 @@ export interface Message {
   timestamp: string;
   reasoning?: string; // 思考过程内容
   isThinkingDone?: boolean; // 思考是否完成
+  toolResults?: string[]; // 工具结果列表
+  isToolResultsDone?: boolean; // 工具结果是否完成
 }
 
 export interface MonitorLog {
@@ -76,5 +78,6 @@ export type StreamRequestHandler = (
   onChunk: (chunk: string) => void,
   onComplete: (result?: ProcessResponse) => void,
   onError: (error: Error) => void,
-  onReasoning?: (reasoning: string) => void
+  onReasoning?: (reasoning: string) => void,
+  onToolResult?: (toolResult: string) => void
 ) => void;

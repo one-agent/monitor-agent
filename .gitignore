@@ -56,3 +56,4 @@ logs/
 **/boba-tea-shop/**/node_modules/
 **/boba-tea-shop/**/dist/
 **/node_modules/
+**/dist/

@@ -13,6 +13,8 @@ import io.agentscope.core.agent.EventType;
 import io.agentscope.core.agent.StreamOptions;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
+import io.agentscope.core.message.TextBlock;
+import io.agentscope.core.message.ThinkingBlock;
 import io.agentscope.core.session.JsonSession;
 import io.agentscope.core.session.Session;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +29,10 @@ import reactor.core.scheduler.Schedulers;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * WebFlux 流式响应控制器
@@ -39,6 +44,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WebFluxStreamingController implements InitializingBean {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final ChatService chatService;
     private final MonitorService monitorService;
     private final ReActAgent customerServiceAgent;
@@ -109,59 +115,59 @@ public class WebFluxStreamingController implements InitializingBean {
                         // Determine event type
                         if (event.getType() == EventType.TOOL_RESULT) {
                             // Tool result event
-                            String textContent = MsgUtils.getTextContent(event.getMessage());
+                            String toolsContent = MsgUtils.getToolsContent(event.getMessage());
                             return Flux.just(
                                     ServerSentEvent.<String>builder()
                                             .event("tool_result")
-                                            .data(textContent)
+                                            .data(toolsContent)
                                             .build()
                             );
                         } else if (event.getType() == EventType.REASONING) {
                             // Reasoning event - may contain both ThinkingBlock and TextBlock
                             String thinking = event.getMessage().getContent().stream()
-                                    .filter(block -> block instanceof io.agentscope.core.message.ThinkingBlock)
-                                    .map(block -> ((io.agentscope.core.message.ThinkingBlock) block).getThinking())
-                                    .collect(java.util.stream.Collectors.joining("\n"));
+                                    .filter(block -> block instanceof ThinkingBlock)
+                                    .map(block -> ((ThinkingBlock) block).getThinking())
+                                    .collect(Collectors.joining("\n"));
 
                             String text = event.getMessage().getContent().stream()
-                                    .filter(block -> block instanceof io.agentscope.core.message.TextBlock)
-                                    .map(block -> ((io.agentscope.core.message.TextBlock) block).getText())
-                                    .collect(java.util.stream.Collectors.joining("\n"));
+                                    .filter(block -> block instanceof TextBlock)
+                                    .map(block -> ((TextBlock) block).getText())
+                                    .collect(Collectors.joining("\n"));
 
                             // Create a flux of SSE events
-                            java.util.List<ServerSentEvent<String>> events = new java.util.ArrayList<>();
+                            List<ServerSentEvent<String>> events = new ArrayList<>();
 
-                            if (!thinking.isEmpty()) {
+                            // Only add reasoning if it's not empty (allow whitespace)
+                            if (thinking != null && !thinking.isEmpty()) {
                                 events.add(
                                         ServerSentEvent.<String>builder()
                                                 .event("reasoning")
-                                                .data(thinking)
+                                                .data(toJson(thinking))
                                                 .build()
                                 );
                             }
 
-                            if (!text.isEmpty()) {
+                            // Only add content if it's not empty (allow whitespace)
+                            if (text != null && !text.isEmpty()) {
                                 events.add(
                                         ServerSentEvent.<String>builder()
                                                 .event("content")
-                                                .data(text)
+                                                .data(toJson(text))
                                                 .build()
                                 );
-                            }
-
+                            }                                    
                             return Flux.fromIterable(events);
-                        } else {
+                        } else {                                        
                             // Other event types - treat as content
                             String textContent = MsgUtils.getTextContent(event.getMessage());
                             return Flux.just(
                                     ServerSentEvent.<String>builder()
                                             .event("content")
-                                            .data(textContent)
+                                            .data(toJson(textContent))
                                             .build()
                             );
                         }
-                    })
-            .filter(sseEvent -> sseEvent.data() != null && !sseEvent.data().isEmpty());
+                    })            .filter(sseEvent -> sseEvent.data() != null && !sseEvent.data().isEmpty());
     }
 
     /**
@@ -181,5 +187,15 @@ public class WebFluxStreamingController implements InitializingBean {
     @GetMapping("/monitor/status")
     public Mono<MonitorStatus> getMonitorStatus() {
         return Mono.fromCallable(monitorService::getCurrentStatus);
+    }
+
+    private String toJson(String content) {
+        try {
+            return objectMapper.writeValueAsString(content);
+        } catch (Exception e) {
+            log.error("Failed to serialize content to JSON", e);
+            // Fallback: simple escaping (incomplete but better than crashing)
+            return "\"" + content.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r") + "\"";
+        }
     }
 }

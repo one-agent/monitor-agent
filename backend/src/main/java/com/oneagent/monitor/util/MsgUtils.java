@@ -15,16 +15,25 @@
  */
 package com.oneagent.monitor.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.message.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Utility methods for working with Msg in examples. These are convenience
  * methods for common
  * operations.
  */
+@Slf4j
 public class MsgUtils {
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Extract text content from a message. Concatenates text from all
@@ -55,6 +64,84 @@ public class MsgUtils {
             return text;
         } else {
             return "[No response]";
+        }
+    }
+
+    public static String getToolsContent(Msg msg) {
+        Map<String, Object> result = new HashMap<>();
+
+        msg.getContent().stream()
+                .filter(block -> block instanceof ToolResultBlock)
+                .map(block -> (ToolResultBlock) block)
+                .forEach(block -> {
+                    // 获取工具名
+                    String toolName = block.getName();
+                    result.put("toolName", toolName);
+
+                    // 处理工具输出
+                    List<ContentBlock> outputs = block.getOutput();
+                    if (outputs == null || outputs.isEmpty()) {
+                        result.put("content", "[No response]");
+                    } else {
+                        // 将所有输出转换为字符串
+                        List<String> outputStrings = new ArrayList<>();
+                        for (ContentBlock output : outputs) {
+                            if (output instanceof TextBlock textBlock) {
+                                outputStrings.add(textBlock.getText());
+                            } else if (output instanceof ImageBlock imageBlock) {
+                                outputStrings.add("[Image: " + imageBlock.getSource() + "]");
+                            } else if (output instanceof AudioBlock audioBlock) {
+                                outputStrings.add("[Audio: " + audioBlock.getSource() + "]");
+                            } else {
+                                outputStrings.add(output.toString());
+                            }
+                        }
+
+                        // 检查输出是否包含 JSON 格式的工具结果
+                        String combinedOutput = String.join("\n", outputStrings);
+                        
+                        // 尝试解析 JSON 格式的工具结果
+                        try {
+                            // 检查是否是 JSON 格式
+                            if (combinedOutput.trim().startsWith("{") || combinedOutput.trim().startsWith("[")) {
+                                Map<String, Object> toolResult = objectMapper.readValue(combinedOutput, Map.class);
+                                
+                                // 如果包含 tool_name 和 result 字段，提取它们
+                                if (toolResult.containsKey("tool_name") && toolResult.containsKey("result")) {
+                                    String actualToolName = (String) toolResult.get("tool_name");
+                                    Object actualResult = toolResult.get("result");
+                                    
+                                    // 使用工具返回的名称
+                                    result.put("toolName", actualToolName);
+                                    
+                                    // 格式化结果
+                                    if (actualResult != null) {
+                                        String formattedResult = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(actualResult);
+                                        result.put("content", formattedResult);
+                                    } else {
+                                        result.put("content", "[No result]");
+                                    }
+                                } else {
+                                    // 不是标准的工具返回格式，直接使用原始输出
+                                    result.put("content", combinedOutput);
+                                }
+                            } else {
+                                // 不是 JSON 格式，直接使用原始输出
+                                result.put("content", combinedOutput);
+                            }
+                        } catch (Exception e) {
+                            // 解析失败，直接使用原始输出
+                            result.put("content", combinedOutput);
+                        }
+                    }
+                });
+
+        // 转换为 JSON 字符串
+        try {
+            return objectMapper.writeValueAsString(result);
+        } catch (Exception e) {
+            log.error("Failed to serialize tool result to JSON", e);
+            return "{\"toolName\":\"unknown\",\"content\":\"[Error serializing result]\"}";
         }
     }
 
@@ -167,4 +254,5 @@ public class MsgUtils {
     private MsgUtils() {
         // Utility class
     }
+
 }

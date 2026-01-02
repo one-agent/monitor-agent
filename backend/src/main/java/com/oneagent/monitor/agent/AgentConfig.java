@@ -43,20 +43,7 @@ public class AgentConfig {
      */
     @Bean
     public OpenAIChatModel chatModel() {
-        // 优先使用 AgentScope 配置，如果没有则使用 Monitor 配置（向后兼容）
         AgentScopeProperties.LlmConfig llmConfig = agentScopeProperties.getLlm();
-
-        // 如果 AgentScope 配置中的 API key 为空，则从 Monitor 配置中获取
-        if (llmConfig.getApiKey() == null || llmConfig.getApiKey().isEmpty()) {
-            MonitorProperties.LlmConfig monitorLlmConfig = monitorProperties.getLlm();
-            // 创建新的 AgentScope 配置对象并复制值
-            llmConfig.setApiKey(monitorLlmConfig.getApiKey());
-            llmConfig.setBaseUrl(monitorLlmConfig.getBaseUrl());
-            llmConfig.setModelName(monitorLlmConfig.getModelName());
-            llmConfig.setTemperature(monitorLlmConfig.getTemperature());
-            llmConfig.setMaxTokens(monitorLlmConfig.getMaxTokens());
-            llmConfig.setStream(monitorLlmConfig.getStream());
-        }
 
         log.info("Creating chat model: url={}, model={}",
                 llmConfig.getBaseUrl(),

@@ -67,6 +67,57 @@ const ThinkingPanel = ({ reasoning, isThinkingDone }: { reasoning: string; isThi
   );
 };
 
+// 可折叠的工具结果组件
+const ToolResultsPanel = ({ toolResults, isToolResultsDone }: { toolResults: string[]; isToolResultsDone?: boolean }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isExpandedRef = useRef(isExpanded);
+
+  // 同步 ref 和 state
+  useEffect(() => {
+    isExpandedRef.current = isExpanded;
+  }, [isExpanded]);
+
+  // 当有内容时，默认展开（只在工具结果未完成时）
+  useEffect(() => {
+    if (!isExpandedRef.current && !isToolResultsDone) {
+      setIsExpanded(true);
+    }
+  }, [isToolResultsDone]);
+
+  // 当工具结果完成时，自动收起
+  useEffect(() => {
+    if (isToolResultsDone && isExpandedRef.current) {
+      setIsExpanded(false);
+    }
+  }, [isToolResultsDone]);
+
+  return (
+    <div className="tool-results-panel">
+      <div 
+        className="tool-results-header"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <span className="tool-results-icon">🔧</span>
+        <span className="tool-results-title">
+          {isToolResultsDone ? '工具执行结果' : '工具执行中...'}
+        </span>
+        <span className="tool-results-toggle">
+          {isExpanded ? '▼' : '▶'}
+        </span>
+      </div>
+      {isExpanded && (
+        <div className="tool-results-content">
+          {toolResults.map((result, index) => (
+            <div key={index} className="tool-result-item">
+              <MarkdownText>{result}</MarkdownText>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface ChatInterfaceProps {
   /**
    * Optional: Provide monitor logs context for richer responses
@@ -184,6 +235,11 @@ export default function ChatInterface({
                 newMessages[msgIndex] = { ...newMessages[msgIndex], isThinkingDone: true };
               }
               
+              // 如果接收到非工具结果的内容，且之前还没有标记为工具结果完成，则标记为完成
+              if (!chunk.startsWith('\n\n> 🔧') && !prev[msgIndex].isToolResultsDone) {
+                newMessages[msgIndex] = { ...newMessages[msgIndex], isToolResultsDone: true };
+              }
+              
               return newMessages;
             }
             return prev;
@@ -193,6 +249,16 @@ export default function ChatInterface({
         () => {
           // Result is already handled through chunks, just ensure loading state is updated
           setLoading(false);
+          // Set tool results as done
+          setMessages(prev => {
+            const msgIndex = prev.findIndex(m => m.id === assistantMsgId);
+            if (msgIndex !== -1) {
+              const newMessages = [...prev];
+              newMessages[msgIndex] = { ...prev[msgIndex], isToolResultsDone: true };
+              return newMessages;
+            }
+            return prev;
+          });
           // Focus back on input
           setTimeout(() => {
             inputRef.current?.focus();
@@ -230,6 +296,22 @@ export default function ChatInterface({
               return prev;
             });
           }
+        },
+        // onToolResult - handle tool result content
+        (toolResult: string) => {
+          setMessages(prev => {
+            const msgIndex = prev.findIndex(m => m.id === assistantMsgId);
+            if (msgIndex !== -1) {
+              const currentToolResults = prev[msgIndex].toolResults || [];
+              const newMessages = [...prev];
+              newMessages[msgIndex] = { 
+                ...prev[msgIndex], 
+                toolResults: [...currentToolResults, toolResult]
+              };
+              return newMessages;
+            }
+            return prev;
+          });
         }
       );
     } catch (error) {
@@ -319,6 +401,12 @@ export default function ChatInterface({
                       <ThinkingPanel 
                         reasoning={msg.reasoning} 
                         isThinkingDone={msg.isThinkingDone} 
+                      />
+                    )}
+                    {msg.role === 'assistant' && msg.toolResults && msg.toolResults.length > 0 && (
+                      <ToolResultsPanel 
+                        toolResults={msg.toolResults} 
+                        isToolResultsDone={msg.isToolResultsDone} 
                       />
                     )}
                     <div className="message-text">

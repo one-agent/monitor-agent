@@ -13,11 +13,6 @@ import org.springframework.stereotype.Component;
 public class MonitorProperties {
 
     /**
-     * LLM API 配置
-     */
-    private LlmConfig llm = new LlmConfig();
-
-    /**
      * 飞书 Webhook 配置
      */
     private FeishuConfig feishu = new FeishuConfig();
@@ -40,19 +35,6 @@ public class MonitorProperties {
      * 输入/输出路径配置
      */
     private PathConfig path = new PathConfig();
-
-    /**
-     * LLM 配置
-     */
-    @Data
-    public static class LlmConfig {
-        private String apiKey;
-        private String baseUrl = "http://localhost:11434/v1";
-        private String modelName = "gpt-3.5-turbo";
-        private Double temperature = 0.7;
-        private Integer maxTokens = 2000;
-        private Boolean stream = false;
-    }
 
     /**
      * 飞书配置

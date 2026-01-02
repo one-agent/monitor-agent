@@ -209,6 +209,16 @@ export default function ChatInterface({
     setMessages(prev => [...prev, assistantMsg]);
 
     try {
+      // 构造监控日志，如果状态不是 200，添加异常日志
+      let currentMonitorLogs = [...monitorLogs];
+      if (!customApiStatus.startsWith('200')) {
+        currentMonitorLogs.push({
+          timestamp: new Date().toISOString(),
+          status: customApiStatus,
+          msg: `System alert: API responded with status ${customApiStatus} - Exception detected in request processing`
+        });
+      }
+
       // Use streaming API for real-time typewriter effect
       await processRequestStream(
         {
@@ -216,7 +226,7 @@ export default function ChatInterface({
           user_query: content,
           api_status: customApiStatus,
           api_response_time: customApiResponseTime,
-          monitor_log: monitorLogs
+          monitor_log: currentMonitorLogs
         },
         // onChunk - update message content in real-time
         (chunk: string) => {

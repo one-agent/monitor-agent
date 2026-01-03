@@ -20,6 +20,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.annotation.Scope;
 
 /**
  * Agent 配置类
@@ -87,7 +88,7 @@ public class AgentConfig {
      * 使用原型作用域，确保每个请求都有独立的 Agent 实例
      */
     @Bean
-    @org.springframework.context.annotation.Scope("prototype")
+    @Scope("prototype")
     public ReActAgent customerServiceAgent(OpenAIChatModel chatModel, Toolkit toolkit) {
         log.info("Creating CustomerServiceAgent");
 

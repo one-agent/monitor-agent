@@ -15,6 +15,8 @@ import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.message.ThinkingBlock;
+import io.agentscope.core.session.JsonSession;
+import io.agentscope.core.session.Session;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
@@ -24,6 +26,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +75,10 @@ public class WebFluxStreamingController {
                 }
         );
 
+        // 创建 Session 并加载已有会话
+        Session session = new JsonSession(Path.of(System.getProperty("user.home"), ".agentscope", "sessions", "monitor"));
+        customerServiceAgent.loadIfExists(session, inputCase.getCaseId());
+
         // 更新监控服务
         monitorService.updateStatus(
                 inputCase.getApiStatus(),
@@ -106,8 +113,14 @@ public class WebFluxStreamingController {
         // 使用 AgentScope 的 stream API
         Flux<Event> eventFlux = customerServiceAgent.stream(message, streamOptions);
 
-        return eventFlux.subscribeOn(Schedulers.boundedElastic())
-            .flatMap(
+        return eventFlux
+                .subscribeOn(Schedulers.boundedElastic())
+                .doFinally(
+                        signalType -> {
+                            // Save session after completion using SessionLoader
+                            customerServiceAgent.saveTo(session, inputCase.getCaseId());
+                        })
+                .flatMap(
                     event -> {
                         // Determine event type
                         if (event.getType() == EventType.TOOL_RESULT) {
@@ -135,7 +148,7 @@ public class WebFluxStreamingController {
                             List<ServerSentEvent<String>> events = new ArrayList<>();
 
                             // Only add reasoning if it's not empty (allow whitespace)
-                            if (thinking != null && !thinking.isEmpty()) {
+                            if (!thinking.isEmpty()) {
                                 events.add(
                                         ServerSentEvent.<String>builder()
                                                 .event("reasoning")
@@ -145,7 +158,7 @@ public class WebFluxStreamingController {
                             }
 
                             // Only add content if it's not empty (allow whitespace)
-                            if (text != null && !text.isEmpty()) {
+                            if (!text.isEmpty()) {
                                 events.add(
                                         ServerSentEvent.<String>builder()
                                                 .event("content")

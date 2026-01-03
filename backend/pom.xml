@@ -43,6 +43,11 @@
             <artifactId>agentscope-spring-boot-starter</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-rag-simple</artifactId>
+        </dependency>
+
         <!-- OpenAI SDK for AgentScope compatibility -->
         <dependency>
             <groupId>com.openai</groupId>

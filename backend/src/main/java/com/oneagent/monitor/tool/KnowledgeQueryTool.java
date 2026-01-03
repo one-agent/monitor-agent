@@ -14,6 +14,8 @@ import java.util.stream.Collectors;
 
 /**
  * 查询知识库的工具类
+ * 注意：在 Agentic RAG 模式下，Agent 会自动使用 retrieve_knowledge 工具
+ * 此工具保留用于向后兼容或特殊场景
  */
 @Slf4j
 @Component
@@ -25,8 +27,9 @@ public class KnowledgeQueryTool {
 
     /**
      * 查询知识库获取业务信息
+     * 注意：在 Agentic RAG 模式下，建议使用 Agent 自动提供的 retrieve_knowledge 工具
      */
-    @Tool(name = "query_knowledge", description = "查询胜算云知识库获取业务信息。用于回答用户关于平台功能、计费模式、服务条款等问题。返回相关的知识库内容片段。")
+    @Tool(name = "query_knowledge", description = "查询胜算云知识库获取业务信息。用于回答用户关于平台功能、计费模式、服务条款等问题。返回相关的知识库内容片段。注意：在 Agentic RAG 模式下，建议使用 retrieve_knowledge 工具。")
     public String queryKnowledge(
             ToolExecutionContext context,
             @ToolParam(name = "query", description = "查询知识库的具体问题或关键词") String query
@@ -34,45 +37,41 @@ public class KnowledgeQueryTool {
         log.info("Querying knowledge base: {}", query);
 
         try {
-            List<String> results = knowledgeBaseService.search(query);
-            String answer;
-            if (results.isEmpty()) {
-                log.info("No results found for query: {}", query);
-                answer = "知识库中未找到相关信息";
+            // 使用 SimpleKnowledge 的检索功能
+            if (knowledgeBaseService.getKnowledge() != null) {
+                io.agentscope.core.rag.model.RetrieveConfig config = io.agentscope.core.rag.model.RetrieveConfig.builder()
+                        .limit(3)
+                        .scoreThreshold(0.3)
+                        .build();
+
+                // retrieve 返回 Mono<List<Document>>
+                reactor.core.publisher.Mono<java.util.List<io.agentscope.core.rag.model.Document>> monoResults =
+                        knowledgeBaseService.getKnowledge().retrieve(query, config);
+
+                // 阻塞获取结果
+                java.util.List<io.agentscope.core.rag.model.Document> documents = monoResults.block();
+
+                String answer;
+                if (documents == null || documents.isEmpty()) {
+                    log.info("No results found for query: {}", query);
+                    answer = "知识库中未找到相关信息";
+                } else {
+                    // 提取文档内容 - 使用 toString() 方法
+                    StringBuilder sb = new StringBuilder();
+                    for (io.agentscope.core.rag.model.Document doc : documents) {
+                        sb.append(doc.toString()).append("\n\n");
+                    }
+                    answer = sb.toString().trim();
+                    log.info("Knowledge query returned {} results", documents.size());
+                }
+                return String.format("{\"__tool_name__\": \"query_knowledge\", \"result\": %s}",
+                        objectMapper.writeValueAsString(answer));
             } else {
-                answer = results.stream().collect(Collectors.joining("\n\n"));
-                log.info("Knowledge query returned {} results", results.size());
+                return "知识库未初始化，请检查 Embedding 模型配置";
             }
-            
-            return String.format("{\"__tool_name__\": \"query_knowledge\", \"result\": %s}", 
-                    objectMapper.writeValueAsString(answer));
         } catch (Exception e) {
             log.error("Error querying knowledge base", e);
             return "查询知识库时发生错误：" + e.getMessage();
-        }
-    }
-
-    /**
-     * 在知识库中搜索关键词
-     */
-    @Tool(name = "search_by_keyword", description = "在知识库中搜索关键词。返回包含该关键词的所有知识条目。")
-    public String searchByKeyword(@ToolParam(name = "keyword", description = "要搜索的关键词") String keyword) {
-        log.info("Searching keyword: {}", keyword);
-
-        try {
-            List<String> results = knowledgeBaseService.search(keyword);
-            String answer;
-
-            if (results.isEmpty()) {
-                answer = "未找到与关键词 \"" + keyword + "\" 相关的信息";
-            } else {
-                answer = results.stream().collect(Collectors.joining("\n\n"));
-            }
-            
-            return objectMapper.writeValueAsString(answer);
-        } catch (Exception e) {
-            log.error("Error searching by keyword", e);
-            return "搜索时发生错误：" + e.getMessage();
         }
     }
 }

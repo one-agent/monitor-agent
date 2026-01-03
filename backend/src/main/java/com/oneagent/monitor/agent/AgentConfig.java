@@ -3,16 +3,26 @@ package com.oneagent.monitor.agent;
 import com.oneagent.monitor.config.AgentScopeProperties;
 import com.oneagent.monitor.hook.ToolMonitorHook;
 import com.oneagent.monitor.model.config.MonitorProperties;
+import com.oneagent.monitor.service.KnowledgeBaseService;
 import com.oneagent.monitor.tool.ApifoxApiTool;
 import com.oneagent.monitor.tool.FeishuWebhookTool;
-import com.oneagent.monitor.tool.KnowledgeQueryTool;
 import com.oneagent.monitor.tool.MonitorCheckTool;
 import io.agentscope.core.ReActAgent;
+import io.agentscope.core.embedding.EmbeddingModel;
+import io.agentscope.core.embedding.openai.OpenAITextEmbedding;
 import io.agentscope.core.formatter.openai.OpenAIChatFormatter;
 import io.agentscope.core.hook.Hook;
 import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.OpenAIChatModel;
+import io.agentscope.core.rag.RAGMode;
+import io.agentscope.core.rag.knowledge.SimpleKnowledge;
+import io.agentscope.core.rag.model.Document;
+import io.agentscope.core.rag.model.RetrieveConfig;
+import io.agentscope.core.rag.reader.ReaderInput;
+import io.agentscope.core.rag.reader.SplitStrategy;
+import io.agentscope.core.rag.reader.TextReader;
+import io.agentscope.core.rag.store.InMemoryStore;
 import io.agentscope.core.studio.StudioManager;
 import io.agentscope.core.studio.StudioMessageHook;
 import io.agentscope.core.tool.Toolkit;
@@ -41,7 +51,7 @@ public class AgentConfig {
     private final FeishuWebhookTool feishuWebhookTool;
     private final ApifoxApiTool apifoxApiTool;
     private final MonitorCheckTool monitorCheckTool;
-    private final KnowledgeQueryTool knowledgeQueryTool;
+    private final KnowledgeBaseService knowledgeBaseService;
 
     /**
      * 创建兼容 OpenAI 的聊天模型
@@ -68,6 +78,30 @@ public class AgentConfig {
     }
 
     /**
+     * 创建 OpenAI TextEmbedding 模型
+     */
+    @Bean
+    public EmbeddingModel textEmbeddingModel() {
+        AgentScopeProperties.EmbeddingConfig embeddingConfig = agentScopeProperties.getEmbedding();
+
+        log.info("Creating text embedding model: url={}, model={}, enabled={}",
+                embeddingConfig.getBaseUrl(),
+                embeddingConfig.getModelName(),
+                embeddingConfig.getEnabled());
+
+        if (!embeddingConfig.getEnabled()) {
+            log.warn("Embedding model is disabled in configuration");
+            return null;
+        }
+
+        return OpenAITextEmbedding.builder()
+                .baseUrl(embeddingConfig.getBaseUrl())
+                .apiKey(embeddingConfig.getApiKey())
+                .modelName(embeddingConfig.getModelName())
+                .build();
+    }
+
+    /**
      * 创建包含所有注册工具的工具包
      */
     @Bean
@@ -80,29 +114,29 @@ public class AgentConfig {
         toolkit.registerTool(feishuWebhookTool);
         toolkit.registerTool(apifoxApiTool);
         toolkit.registerTool(monitorCheckTool);
-        toolkit.registerTool(knowledgeQueryTool);
 
         log.debug("Registered tools: {}", toolkit.getToolNames());
 
         return toolkit;
     }
+
     /**
      * 创建 hook
      */
     public List<Hook> hookList() {
         ToolMonitorHook hook = new ToolMonitorHook();
         return List.of(hook);
-
     }
 
     /**
      * 创建包含所有配置的 ReActAgent
      * 使用原型作用域，确保每个请求都有独立的 Agent 实例
+     * 集成 RAG 功能（Agentic 模式）
      */
     @Bean
     @Scope("prototype")
-    public ReActAgent customerServiceAgent(OpenAIChatModel chatModel, Toolkit toolkit) {
-        log.info("Creating CustomerServiceAgent");
+    public ReActAgent customerServiceAgent(OpenAIChatModel chatModel, Toolkit toolkit, EmbeddingModel textEmbeddingModel) {
+        log.info("Creating CustomerServiceAgent with RAG support");
 
         String systemPrompt = buildSystemPrompt();
 
@@ -115,11 +149,13 @@ public class AgentConfig {
                 .hooks(hookList())
                 .maxIters(10);
 
+        // 集成 RAG 功能（Agentic 模式）
+        builderRAG(textEmbeddingModel, builder);
+
         // 添加 Studio 集成 Hook
         if (monitorProperties.getStudio().isEnabled()) {
             log.info("Studio is enabled, adding StudioMessageHook to agent");
             try {
-                // StudioMessageHook - 用于记录消息到 Studio UI
                 builder.hook(new StudioMessageHook(StudioManager.getClient()));
             } catch (Exception e) {
                 log.warn("Failed to add StudioMessageHook (Studio may not be initialized): {}", e.getMessage());
@@ -127,6 +163,69 @@ public class AgentConfig {
         }
 
         return builder.build();
+    }
+
+    private void builderRAG(EmbeddingModel textEmbeddingModel, ReActAgent.Builder builder) {
+        if (textEmbeddingModel != null) {
+            log.info("Enabling RAG in Agentic mode");
+
+            try {
+                // 创建向量存储 - 使用 InMemoryStore.builder()
+                InMemoryStore vectorStore =
+                        InMemoryStore.builder()
+                                .dimensions(1536)  // text-embedding-3-small 的维度
+                                .build();
+
+                // 创建知识库 - 使用 SimpleKnowledge.builder()
+                SimpleKnowledge knowledge =
+                        SimpleKnowledge.builder()
+                                .embeddingModel(textEmbeddingModel)
+                                .embeddingStore(vectorStore)
+                                .build();
+
+                // 加载文档到知识库
+                // 使用 TextReader 进行文档分块
+                TextReader reader =
+                        new TextReader(
+                                512,  // chunk size
+                                SplitStrategy.PARAGRAPH,
+                                50    // chunk overlap
+                        );
+
+                for (String doc : knowledgeBaseService.getDocuments()) {
+                    try {
+                        ReaderInput input =
+                                ReaderInput.fromString(doc);
+                        List<Document> docs =
+                                reader.read(input).block();
+                        if (docs != null && !docs.isEmpty()) {
+                            knowledge.addDocuments(docs).block();
+                        }
+                    } catch (Exception e) {
+                        log.error("Error adding document to knowledge base: {}", e.getMessage(), e);
+                    }
+                }
+
+                // 将知识库设置到服务中
+                knowledgeBaseService.setKnowledge(knowledge);
+
+                // 配置 RAG 为 Agentic 模式
+                builder.knowledge(knowledge)
+                        .ragMode(RAGMode.AGENTIC)
+                        .retrieveConfig(
+                                RetrieveConfig.builder()
+                                        .limit(3)
+                                        .scoreThreshold(0.3)
+                                        .build()
+                        );
+
+                log.info("RAG enabled successfully with {} documents", knowledgeBaseService.getDocuments().size());
+            } catch (Exception e) {
+                log.error("Failed to initialize RAG: {}", e.getMessage(), e);
+            }
+        } else {
+            log.warn("RAG not enabled: embeddingModel is null");
+        }
     }
 
     /**
@@ -150,17 +249,16 @@ public class AgentConfig {
                 - 回答时保持礼貌、专业、简洁
 
                 【可用工具】
+                - retrieve_knowledge: 从知识库检索相关信息（RAG 模式自动提供）
                 - check_monitor_status: 检查当前系统监控状态
                 - get_monitor_logs: 获取最近的监控日志记录
                 - is_api_healthy: 检查 API 是否健康
-                - query_knowledge: 查询胜算云知识库获取业务信息
-                - search_by_keyword: 在知识库中搜索关键词
                 - send_feishu_alert: 发送飞书告警（系统会自动调用，无需你主动发起）
                 - create_apifox_document: 创建 Apifox 故障记录文档（系统会自动调用，无需你主动发起）
 
                 【工作流程】
                 1. 首先判断用户问题类型（业务咨询 vs 稳定性询问）
-                2. 如果是业务咨询，使用 query_knowledge 工具查询知识库
+                2. 如果是业务咨询，使用 retrieve_knowledge 工具从知识库检索相关信息
                 3. 如果是稳定性询问，使用 get_monitor_logs 获取真实数据
                 4. 根据查询结果，组织准确的回答
                 5. 注意：系统会自动处理 API 告警，你不需要主动调用告警工具

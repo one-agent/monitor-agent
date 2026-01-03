@@ -15,6 +15,11 @@ public class AgentScopeProperties {
      */
     private LlmConfig llm = new LlmConfig();
 
+    /**
+     * Embedding 配置
+     */
+    private EmbeddingConfig embedding = new EmbeddingConfig();
+
     @Data
     public static class LlmConfig {
         private String apiKey;
@@ -23,5 +28,13 @@ public class AgentScopeProperties {
         private Double temperature = 0.7;
         private Integer maxTokens = 2000;
         private Boolean stream = true;
+    }
+
+    @Data
+    public static class EmbeddingConfig {
+        private String apiKey;
+        private String baseUrl = "https://api.openai.com/v1";
+        private String modelName = "text-embedding-3-small";
+        private Boolean enabled = true;
     }
 }

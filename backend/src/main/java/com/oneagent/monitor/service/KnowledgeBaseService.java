@@ -1,6 +1,8 @@
 package com.oneagent.monitor.service;
 
 import io.agentscope.core.rag.knowledge.SimpleKnowledge;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -24,7 +26,21 @@ public class KnowledgeBaseService {
     @Value("${monitor.knowledge.path:src/main/resources/knowledge}")
     private String knowledgePath;
 
+    /**
+     * -- GETTER --
+     *  获取知识库实例
+     * -- SETTER --
+     *  设置知识库实例
+
+     */
+    @Setter
+    @Getter
     private SimpleKnowledge knowledge;
+    /**
+     * -- GETTER --
+     *  获取文档列表
+     */
+    @Getter
     private List<String> documents = new ArrayList<>();
 
     @PostConstruct
@@ -76,24 +92,4 @@ public class KnowledgeBaseService {
         }
     }
 
-    /**
-     * 获取知识库实例
-     */
-    public SimpleKnowledge getKnowledge() {
-        return knowledge;
-    }
-
-    /**
-     * 设置知识库实例
-     */
-    public void setKnowledge(SimpleKnowledge knowledge) {
-        this.knowledge = knowledge;
-    }
-
-    /**
-     * 获取文档列表
-     */
-    public List<String> getDocuments() {
-        return documents;
-    }
 }

@@ -29,7 +29,8 @@ const preprocessMarkdown = (text: string): string => {
   processed = processed.replace(/^(#{1,6}\s.+?)([^\n])([-*]|\d+\.)/gm, '$1\n$2$3');
 
   // 5. 修复列表项格式
-  processed = processed.replace(/^([-*])([^\s])/gm, '$1 $2');
+  // 避免匹配负数 (如 -1)，只匹配后面非数字的情况
+  processed = processed.replace(/^([-*])([^\s\d])/gm, '$1 $2');
   processed = processed.replace(/([^\n])\s*([-*]\s)/g, '$1\n$2');
 
   // 6. 修复列表项结束但后面紧跟正文的情况
@@ -41,7 +42,8 @@ const preprocessMarkdown = (text: string): string => {
   });
 
   // 7. 修复编号列表格式
-  processed = processed.replace(/(\d+\.)([^\s])/g, '$1 $2');
+  // 避免匹配小数 (如 0.1)，只匹配后面非数字的情况
+  processed = processed.replace(/(\d+\.)([^\s\d])/g, '$1 $2');
   processed = processed.replace(/([^\n])\s*(\d+\.\s)/g, '$1\n$2');
 
   // 8. 修复表格格式：确保分隔行前后有且仅有一个换行

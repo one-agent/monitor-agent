@@ -84,8 +84,10 @@ public class AgentConfig {
 
     /**
      * 创建包含所有配置的 ReActAgent
+     * 使用原型作用域，确保每个请求都有独立的 Agent 实例
      */
     @Bean
+    @org.springframework.context.annotation.Scope("prototype")
     public ReActAgent customerServiceAgent(OpenAIChatModel chatModel, Toolkit toolkit) {
         log.info("Creating CustomerServiceAgent");
 

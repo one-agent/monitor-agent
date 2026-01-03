@@ -15,11 +15,8 @@ import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.message.ThinkingBlock;
-import io.agentscope.core.session.JsonSession;
-import io.agentscope.core.session.Session;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
@@ -27,11 +24,10 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -41,24 +37,23 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestController
 @RequestMapping("/api")
-@RequiredArgsConstructor
-public class WebFluxStreamingController implements InitializingBean {
+public class WebFluxStreamingController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ChatService chatService;
     private final MonitorService monitorService;
-    private final ReActAgent customerServiceAgent;
-    private Path sessionPath;
-    @Override
-    public void afterPropertiesSet(){
+    private final ObjectProvider<ReActAgent> customerServiceAgentProvider;
 
-        // Set up session path (now using SessionLoader pattern)
-        sessionPath =
-                Paths.get(
-                        System.getProperty("user.home"),
-                        ".agentscope",
-                        "examples",
-                        "web-sessions");
+    // 会话管理：每个 caseId 对应一个 Agent 实例
+    private final ConcurrentHashMap<String, ReActAgent> agentSessions = new ConcurrentHashMap<>();
+
+    public WebFluxStreamingController(
+            ChatService chatService,
+            MonitorService monitorService,
+            ObjectProvider<ReActAgent> customerServiceAgentProvider) {
+        this.chatService = chatService;
+        this.monitorService = monitorService;
+        this.customerServiceAgentProvider = customerServiceAgentProvider;
     }
 
     /**
@@ -66,9 +61,16 @@ public class WebFluxStreamingController implements InitializingBean {
      */
     @PostMapping(value = "/process", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> processRequest(@RequestBody InputCase inputCase) {
-        Session session = new JsonSession(sessionPath);
-        customerServiceAgent.loadIfExists(session, inputCase.getCaseId());
         log.info("处理流式请求: caseId={}", inputCase.getCaseId());
+
+        // 根据 caseId 获取或创建 Agent 实例（同一个聊天框使用同一个 Agent）
+        ReActAgent customerServiceAgent = agentSessions.computeIfAbsent(
+                inputCase.getCaseId(),
+                id -> {
+                    log.info("为会话 {} 创建新的 Agent 实例", id);
+                    return customerServiceAgentProvider.getObject();
+                }
+        );
 
         // 更新监控服务
         monitorService.updateStatus(
@@ -105,11 +107,6 @@ public class WebFluxStreamingController implements InitializingBean {
         Flux<Event> eventFlux = customerServiceAgent.stream(message, streamOptions);
 
         return eventFlux.subscribeOn(Schedulers.boundedElastic())
-            .doFinally(
-                    signalType -> {
-                        // Save session after completion using SessionLoader
-                        customerServiceAgent.saveTo(session, inputCase.getCaseId());
-                    })
             .flatMap(
                     event -> {
                         // Determine event type
@@ -187,6 +184,19 @@ public class WebFluxStreamingController implements InitializingBean {
     @GetMapping("/monitor/status")
     public Mono<MonitorStatus> getMonitorStatus() {
         return Mono.fromCallable(monitorService::getCurrentStatus);
+    }
+
+    /**
+     * 重置指定会话
+     */
+    @PostMapping("/session/reset/{caseId}")
+    public Mono<Map<String, String>> resetSession(@PathVariable String caseId) {
+        agentSessions.remove(caseId);
+        log.info("已重置会话: {}", caseId);
+        return Mono.just(Map.of(
+                "status", "success",
+                "message", "Session " + caseId + " has been reset"
+        ));
     }
 
     private String toJson(String content) {

@@ -138,6 +138,8 @@ export default function ChatInterface({
   apiStatus = '200 OK',
   apiResponseTime = 'Unknown'
 }: ChatInterfaceProps) {
+  // 为每个聊天框生成固定的 caseId
+  const [caseId] = useState(`C${Date.now()}`);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -176,9 +178,6 @@ export default function ChatInterface({
   const handleSend = async () => {
     const content = inputValue.trim();
     if (!content || loading) return;
-
-    // Generate unique case ID
-    const caseId = `C${Date.now()}`;
 
     // Add user message
     const userMsg: Message = {

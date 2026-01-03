@@ -3,6 +3,7 @@ package com.oneagent.monitor.service;
 import io.agentscope.core.rag.knowledge.SimpleKnowledge;
 import io.agentscope.core.rag.store.InMemoryStore;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
@@ -20,15 +21,10 @@ import java.util.List;
 @Service
 public class KnowledgeBaseService {
 
-    private final String knowledgePath;
-    private SimpleKnowledge knowledge;
+    @Value("${monitor.knowledge.path:src/main/resources/knowledge}")
+    private String knowledgePath;
 
-    public KnowledgeBaseService() {
-        this("knowledge");
-    }
-    public KnowledgeBaseService(String knowledgePath) {
-        this.knowledgePath = knowledgePath;
-    }
+    private SimpleKnowledge knowledge;
 
     @PostConstruct
     public void init() {
@@ -46,9 +42,13 @@ public class KnowledgeBaseService {
             // 对于本项目，我们将使用简单的内存方式
             // 因为嵌入模型可能需要外部 API 密钥
 
-            Path kbPath = Paths.get(knowledgePath);
+            Path kbPath = Paths.get(knowledgePath).toAbsolutePath();
+            log.info("Absolute knowledge base path: {}", kbPath);
+            log.info("Path exists: {}", Files.exists(kbPath));
+
             if (!Files.exists(kbPath)) {
                 log.warn("Knowledge base path does not exist: {}", kbPath);
+                log.warn("Current working directory: {}", System.getProperty("user.dir"));
                 return;
             }
 
@@ -66,14 +66,12 @@ public class KnowledgeBaseService {
                         }
                     });
 
-            // 使用内存存储初始化 SimpleKnowledge
-            // 注意：这是一个没有实际嵌入的简化方法
+            // 注意：SimpleKnowledge 需要配置 embedding model
+            // 这里暂时不初始化，使用简单文本搜索作为回退方案
             // 在生产环境中，你需要配置一个嵌入模型
-            this.knowledge = SimpleKnowledge.builder()
-                    .embeddingStore(InMemoryStore.builder().build())
-                    .build();
+            this.knowledge = null;
 
-            log.info("Knowledge base loaded with {} documents", documents.size());
+            log.info("Knowledge base loaded with {} documents (using simple text search)", documents.size());
 
         } catch (IOException e) {
             log.error("Failed to load knowledge base", e);

@@ -81,8 +81,19 @@ export const processRequestStream: StreamRequestHandler = async (
           currentEventType = line.substring(6).trim();
         } else if (line.startsWith('data:')) {
           try {
-            const textData = line.substring(5).trim();
-            if (!textData) continue;
+            // Fix: Do not trim the end of the line! Trimming removes trailing \n or whitespace-only chunks.
+            // Standard SSE usually has a space after colon: "data: content"
+            let textData = line.substring(5);
+            if (textData.startsWith(' ')) {
+              textData = textData.substring(1);
+            }
+            
+            // If textData is empty here, it might be an empty line meant to keep connection alive or truly empty.
+            // But if it was `data: \n` (encoded as json string "\n"), textData is now `"\n"`.
+            // If it was raw `data: \n`, textData is empty? No, buffer split by \n removes the delimiting newline.
+            // If content is encoded as JSON string, it will be surrounded by quotes.
+            
+            if (!textData && textData !== '') continue;
 
             // 尝试解析 JSON 数据（支持后端的新 JSON 包装格式，也能处理旧的纯文本格式）
             let parsedData: any = textData;

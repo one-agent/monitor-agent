@@ -4,6 +4,7 @@
 
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface MarkdownTextProps {
   children: string;
@@ -16,29 +17,23 @@ const preprocessMarkdown = (text: string): string => {
   let processed = text;
 
   // 1. 修复标题标记被拆分的情况 (例如 "# # " 或 "### #")
-  // 匹配连续的 #，中间可能包含空格，统一替换为连续的 #
   processed = processed.replace(/(#\s*){2,6}/g, (match) => match.replace(/\s+/g, ''));
 
   // 2. 确保标题 (#) 后面有空格
   processed = processed.replace(/(#{1,6})([^\s#\n])/g, '$1 $2');
 
-  // 3. 确保标题前面有换行（如果前面有文字且不是换行）
+  // 3. 确保标题前面有换行
   processed = processed.replace(/([^\n])\s*(#{1,6}\s)/g, '$1\n\n$2');
 
-  // 4. 确保标题后面有换行（如果后面紧跟文字且不是换行）
-  // 匹配：## 标题文字 接下来是正文 -> ## 标题文字\n\n接下来是正文
-  // 这是一个启发式修复：如果一行以标题开头，但后面紧跟了列表或其他文字而没换行
+  // 4. 确保标题后面有换行
   processed = processed.replace(/^(#{1,6}\s.+?)([^\n])([-*]|\d+\.)/gm, '$1\n$2$3');
 
-  // 5. 修复列表项格式：确保 - 或 * 后面有空格
+  // 5. 修复列表项格式
   processed = processed.replace(/^([-*])([^\s])/gm, '$1 $2');
   processed = processed.replace(/([^\n])\s*([-*]\s)/g, '$1\n$2');
 
   // 6. 修复列表项结束但后面紧跟正文的情况
-  // 例如：- 列表项刚才我已核实 -> - 列表项\n刚才我已核实
-  // 匹配：列表项文字 后面紧跟非标点的中文字符（简单判断）
   processed = processed.replace(/([-*]\s.+?)([\u4e00-\u9fa5]{2,})/g, (match, p1, p2) => {
-    // 如果 p1 看起来已经包含了很多文字，且 p2 是新句子的开始
     if (p1.length > 10 && (p2.startsWith('刚才') || p2.startsWith('请问') || p2.startsWith('我已'))) {
       return p1 + '\n\n' + p2;
     }
@@ -49,6 +44,19 @@ const preprocessMarkdown = (text: string): string => {
   processed = processed.replace(/(\d+\.)([^\s])/g, '$1 $2');
   processed = processed.replace(/([^\n])\s*(\d+\.\s)/g, '$1\n$2');
 
+  // 8. 修复表格格式：确保分隔行前后有且仅有一个换行
+  // 匹配：|...| (Header) 紧接着 |---| (Separator)
+  // 使用 $1\n$2 替换，\s* 会消耗掉原来的所有空白（包括多个换行），只保留一个 \n
+  processed = processed.replace(/(\|)\s*(\|[-:]{3,})/g, '$1\n$2');
+  
+  // 匹配：|---| (Separator) 紧接着 |...| (Body)
+  processed = processed.replace(/(\|[-:]{3,}\|)\s*(\|)/g, '$1\n$2');
+
+  // 9. 修复表格行合并问题：|...| |...| -> |...|\n|...|
+  // 匹配：结束的 |，任意空白，开始的 |，且后面紧跟非空白字符（避免破坏空单元格 | |）
+  // 或者是后面跟中文/英文
+  processed = processed.replace(/(\|)[ \t]+(\|[\u4e00-\u9fa5a-zA-Z])/g, '$1\n$2');
+
   return processed;
 };
 
@@ -57,6 +65,7 @@ const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
 
   return (
     <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
       components={{
         code: ({ className, children, ...props }) => {
           const match = /language-(\w+)/.exec(className || '');

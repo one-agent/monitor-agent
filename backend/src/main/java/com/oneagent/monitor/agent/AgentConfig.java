@@ -102,6 +102,69 @@ public class AgentConfig {
     }
 
     /**
+     * 初始化 RAG 知识库
+     */
+    @Bean
+    public SimpleKnowledge ragKnowledge(
+            EmbeddingModel textEmbeddingModel,
+            KnowledgeBaseService knowledgeBaseService) {
+        
+        if (textEmbeddingModel == null) {
+            log.warn("Cannot initialize RAG: embeddingModel is null");
+            return null;
+        }
+
+        log.info("Initializing RAG knowledge base...");
+
+        try {
+            // 创建向量存储
+            InMemoryStore vectorStore =
+                    InMemoryStore.builder()
+                            .dimensions(1536)
+                            .build();
+
+            // 创建知识库
+            SimpleKnowledge knowledge =
+                    SimpleKnowledge.builder()
+                            .embeddingModel(textEmbeddingModel)
+                            .embeddingStore(vectorStore)
+                            .build();
+
+            // 使用 TextReader 进行文档分块
+            TextReader reader =
+                    new TextReader(
+                            512,
+                            SplitStrategy.PARAGRAPH,
+                            50
+                    );
+
+            // 加载文档
+            int docCount = 0;
+            for (String doc : knowledgeBaseService.getDocuments()) {
+                try {
+                    ReaderInput input =
+                            ReaderInput.fromString(doc);
+                    List<Document> docs =
+                            reader.read(input).block();
+                    if (docs != null && !docs.isEmpty()) {
+                        knowledge.addDocuments(docs).block();
+                        docCount++;
+                    }
+                } catch (Exception e) {
+                    log.error("Error adding document to knowledge base: {}", e.getMessage());
+                }
+            }
+
+            log.info("RAG knowledge base initialized with {} documents", docCount);
+            return knowledge;
+
+        } catch (Exception e) {
+            log.error("Failed to initialize RAG knowledge base: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
      * 创建包含所有注册工具的工具包
      */
     @Bean
@@ -135,8 +198,10 @@ public class AgentConfig {
      */
     @Bean
     @Scope("prototype")
-    public ReActAgent customerServiceAgent(OpenAIChatModel chatModel, Toolkit toolkit, EmbeddingModel textEmbeddingModel) {
-        log.info("Creating CustomerServiceAgent with RAG support");
+    public ReActAgent customerServiceAgent(
+            OpenAIChatModel chatModel,
+            Toolkit toolkit,
+            SimpleKnowledge ragKnowledge) {
 
         String systemPrompt = buildSystemPrompt();
 
@@ -150,7 +215,24 @@ public class AgentConfig {
                 .maxIters(10);
 
         // 集成 RAG 功能（Agentic 模式）
-        builderRAG(textEmbeddingModel, builder);
+        if (ragKnowledge != null) {
+            log.info("Creating CustomerServiceAgent with RAG support");
+            log.info("Enabling RAG in Agentic mode");
+
+            // 配置 RAG 为 Agentic 模式
+            builder.knowledge(ragKnowledge)
+                    .ragMode(RAGMode.AGENTIC)
+                    .retrieveConfig(
+                            RetrieveConfig.builder()
+                                    .limit(3)
+                                    .scoreThreshold(0.3)
+                                    .build()
+                    );
+
+            log.info("RAG enabled successfully");
+        } else {
+            log.warn("RAG not enabled: ragKnowledge is null");
+        }
 
         // 添加 Studio 集成 Hook
         if (monitorProperties.getStudio().isEnabled()) {
@@ -163,69 +245,6 @@ public class AgentConfig {
         }
 
         return builder.build();
-    }
-
-    private void builderRAG(EmbeddingModel textEmbeddingModel, ReActAgent.Builder builder) {
-        if (textEmbeddingModel != null) {
-            log.info("Enabling RAG in Agentic mode");
-
-            try {
-                // 创建向量存储 - 使用 InMemoryStore.builder()
-                InMemoryStore vectorStore =
-                        InMemoryStore.builder()
-                                .dimensions(1536)  // text-embedding-3-small 的维度
-                                .build();
-
-                // 创建知识库 - 使用 SimpleKnowledge.builder()
-                SimpleKnowledge knowledge =
-                        SimpleKnowledge.builder()
-                                .embeddingModel(textEmbeddingModel)
-                                .embeddingStore(vectorStore)
-                                .build();
-
-                // 加载文档到知识库
-                // 使用 TextReader 进行文档分块
-                TextReader reader =
-                        new TextReader(
-                                512,  // chunk size
-                                SplitStrategy.PARAGRAPH,
-                                50    // chunk overlap
-                        );
-
-                for (String doc : knowledgeBaseService.getDocuments()) {
-                    try {
-                        ReaderInput input =
-                                ReaderInput.fromString(doc);
-                        List<Document> docs =
-                                reader.read(input).block();
-                        if (docs != null && !docs.isEmpty()) {
-                            knowledge.addDocuments(docs).block();
-                        }
-                    } catch (Exception e) {
-                        log.error("Error adding document to knowledge base: {}", e.getMessage(), e);
-                    }
-                }
-
-                // 将知识库设置到服务中
-                knowledgeBaseService.setKnowledge(knowledge);
-
-                // 配置 RAG 为 Agentic 模式
-                builder.knowledge(knowledge)
-                        .ragMode(RAGMode.AGENTIC)
-                        .retrieveConfig(
-                                RetrieveConfig.builder()
-                                        .limit(3)
-                                        .scoreThreshold(0.3)
-                                        .build()
-                        );
-
-                log.info("RAG enabled successfully with {} documents", knowledgeBaseService.getDocuments().size());
-            } catch (Exception e) {
-                log.error("Failed to initialize RAG: {}", e.getMessage(), e);
-            }
-        } else {
-            log.warn("RAG not enabled: embeddingModel is null");
-        }
     }
 
     /**

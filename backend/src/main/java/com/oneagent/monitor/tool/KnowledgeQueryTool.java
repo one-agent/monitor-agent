@@ -1,6 +1,8 @@
 package com.oneagent.monitor.tool;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.core.rag.model.Document;
+import io.agentscope.core.rag.model.RetrieveConfig;
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolExecutionContext;
 import io.agentscope.core.tool.ToolParam;
@@ -8,6 +10,7 @@ import com.oneagent.monitor.service.KnowledgeBaseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -39,17 +42,17 @@ public class KnowledgeQueryTool {
         try {
             // 使用 SimpleKnowledge 的检索功能
             if (knowledgeBaseService.getKnowledge() != null) {
-                io.agentscope.core.rag.model.RetrieveConfig config = io.agentscope.core.rag.model.RetrieveConfig.builder()
+                RetrieveConfig config = RetrieveConfig.builder()
                         .limit(3)
                         .scoreThreshold(0.3)
                         .build();
 
                 // retrieve 返回 Mono<List<Document>>
-                reactor.core.publisher.Mono<java.util.List<io.agentscope.core.rag.model.Document>> monoResults =
+                Mono<List<Document>> monoResults =
                         knowledgeBaseService.getKnowledge().retrieve(query, config);
 
                 // 阻塞获取结果
-                java.util.List<io.agentscope.core.rag.model.Document> documents = monoResults.block();
+                List<Document> documents = monoResults.block();
 
                 String answer;
                 if (documents == null || documents.isEmpty()) {
@@ -58,14 +61,13 @@ public class KnowledgeQueryTool {
                 } else {
                     // 提取文档内容 - 使用 toString() 方法
                     StringBuilder sb = new StringBuilder();
-                    for (io.agentscope.core.rag.model.Document doc : documents) {
+                    for (Document doc : documents) {
                         sb.append(doc.toString()).append("\n\n");
                     }
                     answer = sb.toString().trim();
                     log.info("Knowledge query returned {} results", documents.size());
                 }
-                return String.format("{\"__tool_name__\": \"query_knowledge\", \"result\": %s}",
-                        objectMapper.writeValueAsString(answer));
+                return objectMapper.writeValueAsString(answer);
             } else {
                 return "知识库未初始化，请检查 Embedding 模型配置";
             }

@@ -13,7 +13,7 @@ import {
   CopyOutlined,
   CheckOutlined
 } from '@ant-design/icons';
-import { processRequestStream } from '../services/api';
+import { processRequestStream, resetSession } from '../services/api';
 import type { Message, MonitorLog } from '../types';
 import MarkdownText from './MarkdownText';
 import './ChatInterface.css';
@@ -139,7 +139,7 @@ export default function ChatInterface({
   apiResponseTime = 'Unknown'
 }: ChatInterfaceProps) {
   // 为每个聊天框生成固定的 caseId
-  const [caseId] = useState(`C${Date.now()}`);
+  const [caseId, setCaseId] = useState(`C${Date.now()}`);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -358,7 +358,19 @@ export default function ChatInterface({
     setTimeout(() => setCopiedMessageId(null), 2000);
   };
 
-  const handleClearHistory = () => {
+  const handleClearHistory = async () => {
+    // 调用后端 API 重置会话
+    try {
+      await resetSession(caseId);
+      console.log(`会话 ${caseId} 已重置`);
+    } catch (error) {
+      console.error('重置会话失败:', error);
+    }
+
+    // 生成新的 caseId
+    setCaseId(`C${Date.now()}`);
+
+    // 清空前端消息
     setMessages([]);
     localStorage.removeItem('chat-messages');
   };

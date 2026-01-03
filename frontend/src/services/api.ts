@@ -219,3 +219,18 @@ export async function healthCheck(): Promise<{ status: string; service: string }
 
   return response.json();
 }
+
+/**
+ * Reset a specific session by caseId
+ */
+export async function resetSession(caseId: string): Promise<{ status: string; message: string }> {
+  const response = await fetch(`${API_BASE_URL}/session/reset/${caseId}`, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  return response.json();
+}

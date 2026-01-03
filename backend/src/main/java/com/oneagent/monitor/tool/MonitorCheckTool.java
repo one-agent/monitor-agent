@@ -33,8 +33,7 @@ public class MonitorCheckTool {
         MonitorStatus status = monitorService.getCurrentStatus();
         log.debug("Monitor status: {}", status);
         try {
-            String resultJson = objectMapper.writeValueAsString(status);
-            return String.format("{\"__tool_name__\": \"check_monitor_status\", \"result\": %s}", resultJson);
+            return objectMapper.writeValueAsString(status);
         } catch (Exception e) {
             log.error("Failed to serialize monitor status", e);
             return "{\"error\": \"Failed to serialize monitor status\"}";
@@ -50,8 +49,7 @@ public class MonitorCheckTool {
         List<MonitorLog> logs = monitorService.getRecentLogs();
         log.debug("Monitor logs count: {}", logs.size());
         try {
-            String resultJson = objectMapper.writeValueAsString(logs);
-            return String.format("{\"__tool_name__\": \"get_monitor_logs\", \"result\": %s}", resultJson);
+            return objectMapper.writeValueAsString(logs);
         } catch (Exception e) {
             log.error("Failed to serialize monitor logs", e);
             return "[]";
@@ -65,6 +63,11 @@ public class MonitorCheckTool {
     public String isApiHealthy() {
         MonitorStatus status = monitorService.getCurrentStatus();
         boolean isHealthy = "200 OK".equalsIgnoreCase(status.getStatus());
-        return String.format("{\"__tool_name__\": \"is_api_healthy\", \"result\": %b}", isHealthy);
+        try {
+            return objectMapper.writeValueAsString(isHealthy);
+        } catch (Exception e) {
+            log.error("Failed to serialize isApiHealthy result", e);
+            return "false";
+        }
     }
 }

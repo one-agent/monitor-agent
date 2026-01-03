@@ -69,8 +69,7 @@ public class KnowledgeQueryTool {
                 answer = results.stream().collect(Collectors.joining("\n\n"));
             }
             
-            return String.format("{\"__tool_name__\": \"search_by_keyword\", \"result\": %s}", 
-                    objectMapper.writeValueAsString(answer));
+            return objectMapper.writeValueAsString(answer);
         } catch (Exception e) {
             log.error("Error searching by keyword", e);
             return "搜索时发生错误：" + e.getMessage();

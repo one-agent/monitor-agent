@@ -88,8 +88,7 @@ public class FeishuWebhookTool {
                     log.error("Failed to send Feishu alert: {}", response.code());
                     result = "Failed: " + response.code();
                 }
-                return String.format("{\"__tool_name__\": \"send_feishu_alert\", \"result\": %s}", 
-                        objectMapper.writeValueAsString(result));
+                return objectMapper.writeValueAsString(result);
             }
         } catch (IOException e) {
             log.error("Error sending Feishu alert", e);

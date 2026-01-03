@@ -1,6 +1,7 @@
 package com.oneagent.monitor.agent;
 
 import com.oneagent.monitor.config.AgentScopeProperties;
+import com.oneagent.monitor.hook.ToolMonitorHook;
 import com.oneagent.monitor.model.config.MonitorProperties;
 import com.oneagent.monitor.tool.ApifoxApiTool;
 import com.oneagent.monitor.tool.FeishuWebhookTool;
@@ -8,6 +9,7 @@ import com.oneagent.monitor.tool.KnowledgeQueryTool;
 import com.oneagent.monitor.tool.MonitorCheckTool;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.formatter.openai.OpenAIChatFormatter;
+import io.agentscope.core.hook.Hook;
 import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.OpenAIChatModel;
@@ -21,6 +23,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Scope;
+
+import java.util.List;
 
 /**
  * Agent 配置类
@@ -67,7 +71,7 @@ public class AgentConfig {
      * 创建包含所有注册工具的工具包
      */
     @Bean
-    public Toolkit toolkit() {
+    public Toolkit toolkit(OpenAIChatModel chatModel) {
         log.info("Creating toolkit and registering tools");
 
         Toolkit toolkit = new Toolkit();
@@ -81,6 +85,14 @@ public class AgentConfig {
         log.debug("Registered tools: {}", toolkit.getToolNames());
 
         return toolkit;
+    }
+    /**
+     * 创建 hook
+     */
+    public List<Hook> hookList() {
+        ToolMonitorHook hook = new ToolMonitorHook();
+        return List.of(hook);
+
     }
 
     /**
@@ -100,6 +112,7 @@ public class AgentConfig {
                 .sysPrompt(systemPrompt)
                 .memory(new InMemoryMemory())
                 .toolkit(toolkit)
+                .hooks(hookList())
                 .maxIters(10);
 
         // 添加 Studio 集成 Hook

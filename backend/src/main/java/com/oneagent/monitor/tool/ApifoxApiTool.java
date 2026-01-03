@@ -48,7 +48,6 @@ public class ApifoxApiTool {
         String projectId = monitorProperties.getApifox().getProjectId();
         String folderId = monitorProperties.getApifox().getFolderId();
         String moduleId = monitorProperties.getApifox().getModuleId();
-
         // 调试：打印实际配置值
         log.info("Apifox Config - Token: [{}], ProjectId: [{}], FolderId: [{}], ModuleId: [{}]",
                 apiToken != null ? "***" + apiToken.substring(0, Math.min(10, apiToken.length())) + "***" : "null",
@@ -111,7 +110,7 @@ public class ApifoxApiTool {
                     }
                 } else {
                     log.error("Failed to create Apifox document: code={}, message={}", response.code(), response.message());
-                    String responseBody = response.body() != null ? response.body().string() : "no response";
+                    String responseBody = response.body().string();
                     log.error("Apifox Response Body: {}", responseBody);
                     result = docId;
                 }
@@ -126,10 +125,9 @@ public class ApifoxApiTool {
     
     private String wrapResult(String result) {
         try {
-            return String.format("{\"__tool_name__\": \"create_apifox_document\", \"result\": %s}", 
-                    objectMapper.writeValueAsString(result));
+            return objectMapper.writeValueAsString(result);
         } catch (Exception e) {
-             return String.format("{\"__tool_name__\": \"create_apifox_document\", \"result\": \"%s\"}", result);
+            return result;
         }
     }
 

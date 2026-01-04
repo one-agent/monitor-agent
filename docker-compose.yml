@@ -54,7 +54,7 @@ services:
     build: ./frontend
     container_name: monitor-frontend
     ports:
-      - "5180:80"
+      - "5173:80"
     depends_on:
       backend:
         condition: service_healthy

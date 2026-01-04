@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # 后端服务
+  backend:
+    build: ./backend
+    container_name: monitor-backend
+    ports:
+      - "8081:8081"
+    environment:
+      # LLM 配置
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gpt-3.5-turbo}
+
+      # Embedding 配置（用于 RAG）
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY}
+      - EMBEDDING_BASE_URL=${EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME:-text-embedding-3-small}
+
+      # 飞书 Webhook（可选）
+      - FEISHU_WEBHOOK_URL=${FEISHU_WEBHOOK_URL}
+
+      # Apifox API（可选）
+      - APIFOX_API_URL=${APIFOX_API_URL:-https://api.apifox.com}
+      - APIFOX_API_TOKEN=${APIFOX_API_TOKEN}
+      - APIFOX_PROJECT_ID=${APIFOX_PROJECT_ID}
+      - APIFOX_FOLDER_ID=${APIFOX_FOLDER_ID}
+      - APIFOX_MODULE_ID=${APIFOX_MODULE_ID}
+
+      # 应用配置
+      - SERVER_PORT=8081
+      - SPRING_PROFILES_ACTIVE=prod
+    volumes:
+      # 知识库目录（可选，用于动态更新知识库）
+      - ./backend/src/main/resources/knowledge:/app/knowledge
+      # 会话数据持久化
+      - agent-sessions:/root/.agentscope/sessions
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - monitor-network
+
+  # 前端服务
+  frontend:
+    build: ./frontend
+    container_name: monitor-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - monitor-network
+
+  # Redis 缓存（可选，用于会话存储和缓存）
+  redis:
+    image: redis:7-alpine
+    container_name: monitor-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - monitor-network
+
+networks:
+  monitor-network:
+    driver: bridge
+
+volumes:
+  # Redis 数据卷
+  redis-data:
+    driver: local
+
+  # Agent 会话数据卷
+  agent-sessions:
+    driver: local

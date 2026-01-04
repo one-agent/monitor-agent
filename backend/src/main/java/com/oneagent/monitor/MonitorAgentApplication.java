@@ -26,12 +26,10 @@ public class MonitorAgentApplication {
         log.info("LLM 服务地址: {}", env.getProperty("agentscope.llm.base-url"));
         log.info("=========================================");
         log.info("可用端点:");
-        log.info("  - POST /api/chat              : 简单对话");
-        log.info("  - POST /api/process            : 处理单个测试用例");
-        log.info("  - POST /api/process-batch       : 批量处理测试用例");
-        log.info("  - GET  /api/monitor/status     : 监控状态");
-        log.info("  - GET  /api/health              : 健康检查");
-        log.info("  - GET  /api/info                : API 信息");
+        log.info("  - POST /api/process            : 流式处理请求 (SSE)");
+        log.info("  - GET  /api/monitor/status     : 获取监控状态");
+        log.info("  - GET  /api/health            : 健康检查");
+        log.info("  - POST /api/session/reset/{caseId} : 重置指定会话");
         log.info("=========================================");
     }
 }

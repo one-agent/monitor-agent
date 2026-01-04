@@ -57,3 +57,4 @@ logs/
 **/boba-tea-shop/**/dist/
 **/node_modules/
 **/dist/
+.env

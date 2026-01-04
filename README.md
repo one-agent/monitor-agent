@@ -49,7 +49,49 @@
 - Node.js 18+
 - Maven 3.8+
 
-### 后端启动
+### Docker 部署（推荐）
+
+使用 Docker Compose 一键启动完整的应用栈：
+
+```bash
+# 1. 复制环境变量配置文件
+cp .env.example .env
+
+# 2. 编辑 .env 文件，配置必需的环境变量
+# 至少需要配置 LLM_API_KEY 和 EMBEDDING_API_KEY
+
+# 3. 启动所有服务
+docker-compose up -d
+
+# 4. 查看服务状态
+docker-compose ps
+
+# 5. 查看日志
+docker-compose logs -f
+
+# 访问应用
+# 前端: http://localhost
+# 后端健康检查: http://localhost:8081/api/health
+```
+
+**停止服务**:
+
+```bash
+docker-compose down
+
+# 停止并删除数据卷
+docker-compose down -v
+```
+
+**重新构建并启动**:
+
+```bash
+docker-compose up -d --build
+```
+
+### 本地部署
+
+**后端启动**：
 
 ```bash
 cd backend
@@ -58,8 +100,15 @@ cd backend
 export LLM_API_KEY="your-openai-api-key"
 export LLM_BASE_URL="https://api.openai.com/v1"
 export LLM_MODEL_NAME="gpt-3.5-turbo"
+export EMBEDDING_API_KEY="your-openai-api-key"
+export EMBEDDING_BASE_URL="https://api.openai.com/v1"
+export EMBEDDING_MODEL_NAME="text-embedding-3-small"
 export FEISHU_WEBHOOK_URL="your-feishu-webhook-url"
+export APIFOX_API_URL="https://api.apifox.com"
 export APIFOX_API_TOKEN="your-apifox-token"
+export APIFOX_PROJECT_ID="your-project-id-here"
+export APIFOX_FOLDER_ID="your-folder-id-here"
+export APIFOX_MODULE_ID="your-module-id-here"
 
 # 运行应用
 mvn spring-boot:run
@@ -67,7 +116,7 @@ mvn spring-boot:run
 
 服务将在 `http://localhost:8081` 启动。
 
-### 前端启动
+**前端启动**：
 
 ```bash
 cd frontend
@@ -81,18 +130,99 @@ npm run dev
 
 前端将在 `http://localhost:5173` 启动。
 
+### Docker 部署
+
+**独立构建镜像**：
+
+```bash
+# 构建后端镜像
+cd backend
+docker build -t monitor-agent-backend:latest .
+
+# 构建前端镜像
+cd ../frontend
+docker build -t monitor-agent-frontend:latest .
+
+# 运行后端容器
+docker run -d \
+  --name monitor-backend \
+  -p 8081:8081 \
+  -e LLM_API_KEY="your-api-key" \
+  -e LLM_BASE_URL="https://api.openai.com/v1" \
+  monitor-agent-backend:latest
+
+# 运行前端容器
+docker run -d \
+  --name monitor-frontend \
+  -p 80:80 \
+  --link monitor-backend:backend \
+  monitor-agent-frontend:latest
+```
+
+**使用 Docker Compose（推荐）**：
+
+```bash
+# 1. 复制环境变量配置文件
+cp .env.example .env
+
+# 2. 编辑 .env 文件，配置必需的环境变量
+# 至少需要配置 LLM_API_KEY
+
+# 3. 启动所有服务（包括后端、前端、Redis）
+docker-compose up -d
+
+# 4. 查看服务状态
+docker-compose ps
+
+# 5. 查看日志
+docker-compose logs -f
+
+# 6. 访问应用
+# 前端: http://localhost
+# 后端健康检查: http://localhost:8081/api/health
+```
+
+**Docker Compose 常用命令**：
+
+```bash
+# 停止所有服务
+docker-compose down
+
+# 停止并删除数据卷
+docker-compose down -v
+
+# 重新构建并启动
+docker-compose up -d --build
+
+# 查看某个服务的日志
+docker-compose logs -f backend
+docker-compose logs -f frontend
+
+# 重启某个服务
+docker-compose restart backend
+
+# 查看资源使用情况
+docker-compose top
+```
+
 ## 配置说明
 
 ### 环境变量
 
 | 变量 | 说明 | 默认值 | 是否必需 |
 |------|------|--------|----------|
-| `LLM_API_KEY` | OpenAI API 密钥 | - | 是 |
-| `LLM_BASE_URL` | LLM 基础 URL | `http://localhost:11434/v1` | 否 |
+| `LLM_API_KEY` | OpenAI API 密钥（用于 Chat） | - | 是 |
+| `LLM_BASE_URL` | LLM 基础 URL | `https://api.openai.com/v1` | 否 |
 | `LLM_MODEL_NAME` | LLM 模型名称 | `gpt-3.5-turbo` | 否 |
+| `EMBEDDING_API_KEY` | Embedding API 密钥（用于 RAG） | - | 是 |
+| `EMBEDDING_BASE_URL` | Embedding 基础 URL | `https://api.openai.com/v1` | 否 |
+| `EMBEDDING_MODEL_NAME` | Embedding 模型名称 | `text-embedding-3-small` | 否 |
 | `FEISHU_WEBHOOK_URL` | 飞书 Webhook URL | - | 否 |
 | `APIFOX_API_URL` | Apifox API URL | `https://api.apifox.com` | 否 |
 | `APIFOX_API_TOKEN` | Apifox API Token | - | 否 |
+| `APIFOX_PROJECT_ID` | Apifox 项目 ID | - | 否 |
+| `APIFOX_FOLDER_ID` | Apifox 文件夹 ID | - | 否 |
+| `APIFOX_MODULE_ID` | Apifox 模块 ID | - | 否 |
 | `SERVER_PORT` | 服务端口 | `8081` | 否 |
 
 ### 应用配置
@@ -103,14 +233,16 @@ npm run dev
 # 服务端口
 server.port=8081
 
-# LLM 配置
+# LLM 配置（用于 Chat）
 agentscope.llm.api-key=${LLM_API_KEY:}
 agentscope.llm.base-url=${LLM_BASE_URL:http://localhost:11434/v1}
 agentscope.llm.model-name=${LLM_MODEL_NAME:gpt-3.5-turbo}
 
 # Embedding 配置（用于 RAG）
+agentscope.embedding.api-key=${EMBEDDING_API_KEY:}
+agentscope.embedding.base-url=${EMBEDDING_BASE_URL:http://localhost:11434/v1}
+agentscope.embedding.model-name=${EMBEDDING_MODEL_NAME:text-embedding-3-small}
 agentscope.embedding.enabled=true
-agentscope.embedding.model-name=text-embedding-3-small
 
 # 飞书 Webhook
 monitor.feishu.webhook-url=${FEISHU_WEBHOOK_URL:}
@@ -128,25 +260,35 @@ monitor.studio.enabled=false
 ```
 monitor-agent/
 ├── backend/                    # 后端服务
-│   ├── src/main/java/com/oneagent/monitor/
-│   │   ├── agent/            # Agent 配置
-│   │   ├── config/           # 配置类
-│   │   ├── controller/       # REST API 控制器
-│   │   ├── hook/             # Hook 钩子
-│   │   ├── model/            # 数据模型
-│   │   ├── service/          # 业务服务
-│   │   ├── tool/             # Agent 工具
-│   │   ├── studio/           # Studio 集成
-│   │   └── util/             # 工具类
+│   ├── Dockerfile              # 后端 Docker 镜像构建文件
+│   ├── pom.xml               # Maven 依赖配置
+│   └── src/main/java/com/oneagent/monitor/
+│       ├── agent/            # Agent 配置
+│       ├── config/           # 配置类
+│       ├── controller/       # REST API 控制器
+│       ├── hook/             # Hook 钩子
+│       ├── model/            # 数据模型
+│       ├── service/          # 业务服务
+│       ├── tool/             # Agent 工具
+│       ├── studio/           # Studio 集成
+│       └── util/             # 工具类
 │   └── src/main/resources/
 │       ├── application.properties
 │       └── knowledge/        # 知识库文档
 ├── frontend/                   # 前端应用
+│   ├── Dockerfile              # 前端 Docker 镜像构建文件
+│   ├── nginx.conf             # Nginx 配置文件
+│   ├── package.json             # NPM 配置
 │   └── src/
 │       ├── components/        # UI 组件
 │       ├── services/         # API 服务
 │       ├── types/            # TypeScript 类型
 │       └── *.css             # 样式文件
+├── docker-compose.yml          # Docker Compose 配置
+├── .env.example              # 环境变量示例
+├── docs/                     # 文档目录
+│   ├── ARCHITECTURE.md       # 架构文档
+│   └── API.md               # API 文档
 └── 智能客服监控 Agent.md      # 项目说明
 ```
 
@@ -273,25 +415,6 @@ npm run preview
 - 纯文本 (.txt)
 
 添加新知识后需要重启后端服务以重新加载。
-
-## 部署
-
-详细的部署指南请参考 [部署文档](docs/DEPLOYMENT.md)。
-
-### Docker 部署
-
-```bash
-# 构建后端镜像
-cd backend
-docker build -t monitor-agent-backend .
-
-# 构建前端镜像
-cd frontend
-docker build -t monitor-agent-frontend .
-
-# 使用 Docker Compose 启动
-docker-compose up -d
-```
 
 ## 常见问题
 

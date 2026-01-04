@@ -107,8 +107,6 @@ export FEISHU_WEBHOOK_URL="your-feishu-webhook-url"
 export APIFOX_API_URL="https://api.apifox.com"
 export APIFOX_API_TOKEN="your-apifox-token"
 export APIFOX_PROJECT_ID="your-project-id-here"
-export APIFOX_FOLDER_ID="your-folder-id-here"
-export APIFOX_MODULE_ID="your-module-id-here"
 
 # 运行应用
 mvn spring-boot:run
@@ -209,21 +207,21 @@ docker-compose top
 
 ### 环境变量
 
-| 变量 | 说明 | 默认值 | 是否必需 |
-|------|------|--------|----------|
-| `LLM_API_KEY` | OpenAI API 密钥（用于 Chat） | - | 是 |
-| `LLM_BASE_URL` | LLM 基础 URL | `https://api.openai.com/v1` | 否 |
-| `LLM_MODEL_NAME` | LLM 模型名称 | `gpt-3.5-turbo` | 否 |
-| `EMBEDDING_API_KEY` | Embedding API 密钥（用于 RAG） | - | 是 |
-| `EMBEDDING_BASE_URL` | Embedding 基础 URL | `https://api.openai.com/v1` | 否 |
-| `EMBEDDING_MODEL_NAME` | Embedding 模型名称 | `text-embedding-3-small` | 否 |
-| `FEISHU_WEBHOOK_URL` | 飞书 Webhook URL | - | 否 |
-| `APIFOX_API_URL` | Apifox API URL | `https://api.apifox.com` | 否 |
-| `APIFOX_API_TOKEN` | Apifox API Token | - | 否 |
-| `APIFOX_PROJECT_ID` | Apifox 项目 ID | - | 否 |
-| `APIFOX_FOLDER_ID` | Apifox 文件夹 ID | - | 否 |
-| `APIFOX_MODULE_ID` | Apifox 模块 ID | - | 否 |
-| `SERVER_PORT` | 服务端口 | `8081` | 否 |
+| 变量 | 说明                       | 默认值 | 是否必需 |
+|------|--------------------------|--------|------|
+| `LLM_API_KEY` | OpenAI API 密钥（用于 Chat）   | - | 是    |
+| `LLM_BASE_URL` | LLM 基础 URL (兼容OpenAI规范)  | `https://api.openai.com/v1` | 是    |
+| `LLM_MODEL_NAME` | LLM 模型名称                 | `gpt-3.5-turbo` | 是    |
+| `EMBEDDING_API_KEY` | Embedding API 密钥（用于 RAG） | - | 是    |
+| `EMBEDDING_BASE_URL` | Embedding 基础 URL         | `https://api.openai.com/v1` | 是    |
+| `EMBEDDING_MODEL_NAME` | Embedding 模型名称           | `text-embedding-3-small` | 是    |
+| `FEISHU_WEBHOOK_URL` | 飞书 Webhook URL           | - | 是    |
+| `APIFOX_API_URL` | Apifox API URL           | `https://api.apifox.com` | 是    |
+| `APIFOX_API_TOKEN` | Apifox API Token         | - | 是    |
+| `APIFOX_PROJECT_ID` | Apifox 项目 ID             | - | 是    |
+| `APIFOX_FOLDER_ID` | Apifox 文件夹 ID            | - | 否    |
+| `APIFOX_MODULE_ID` | Apifox 模块 ID             | - | 否    |
+| `SERVER_PORT` | 服务端口                     | `8081` | 否    |
 
 ### 应用配置
 
@@ -249,6 +247,7 @@ monitor.feishu.webhook-url=${FEISHU_WEBHOOK_URL:}
 
 # Apifox API
 monitor.apifox.api-url=${APIFOX_API_URL:https://api.apifox.com}
+monitor.apifox.project-id=${APIFOX_PROJECT_ID:}
 monitor.apifox.api-token=${APIFOX_API_TOKEN:}
 
 # Studio 支持

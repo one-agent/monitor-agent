@@ -4,14 +4,16 @@ import io.agentscope.core.rag.knowledge.SimpleKnowledge;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,8 +25,16 @@ import java.util.List;
 @Service
 public class KnowledgeBaseService {
 
-    @Value("${monitor.knowledge.path:src/main/resources/knowledge}")
-    private String knowledgePath;
+    /**
+     * 知识库路径 pattern，支持动态读取 classpath 中的文件
+     */
+    private static final String KNOWLEDGE_PATH_PATTERN = "classpath*:knowledge/**/*.md";
+
+    private final ResourceLoader resourceLoader;
+
+    public KnowledgeBaseService(ResourceLoader resourceLoader) {
+        this.resourceLoader = resourceLoader;
+    }
 
     /**
      * -- GETTER --
@@ -49,46 +59,51 @@ public class KnowledgeBaseService {
     }
 
     /**
-     * 从文件加载知识库
+     * 从 classpath 动态加载知识库
      */
     public void loadKnowledgeBase() {
-        log.info("Loading knowledge base from: {}", knowledgePath);
+        log.info("Loading knowledge base from classpath: {}", KNOWLEDGE_PATH_PATTERN);
 
         try {
-            Path kbPath = Paths.get(knowledgePath).toAbsolutePath();
-            log.info("Absolute knowledge base path: {}", kbPath);
-            log.info("Path exists: {}", Files.exists(kbPath));
+            PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(resourceLoader);
+            Resource[] resources = resolver.getResources(KNOWLEDGE_PATH_PATTERN);
 
-            if (!Files.exists(kbPath)) {
-                log.warn("Knowledge base path does not exist: {}", kbPath);
-                return;
+            log.info("Found {} knowledge files in classpath", resources.length);
+
+            for (Resource resource : resources) {
+                try {
+                    String content = readResourceContent(resource);
+                    documents.add(content);
+                    log.info("Loaded knowledge file: {}", resource.getFilename());
+                } catch (IOException e) {
+                    log.error("Failed to read resource: {}", resource.getFilename(), e);
+                }
             }
-
-            // 收集所有文档内容
-            Files.walk(kbPath)
-                    .filter(p -> p.toString().endsWith(".md") || p.toString().endsWith(".txt"))
-                    .forEach(file -> {
-                        try {
-                            String content = Files.readString(file);
-                            documents.add(content);
-                            log.info("Loaded knowledge file: {}", file.getFileName());
-                        } catch (IOException e) {
-                            log.error("Failed to read file: {}", file, e);
-                        }
-                    });
 
             if (documents.isEmpty()) {
-                log.warn("No documents found in knowledge base path: {}", kbPath);
+                log.warn("No documents found in knowledge base path: {}", KNOWLEDGE_PATH_PATTERN);
                 return;
             }
 
-            log.info("Found {} documents in knowledge base", documents.size());
-
-            // SimpleKnowledge 将在 AgentConfig 中通过 EmbeddingModel 初始化
-            log.info("Knowledge base documents loaded successfully");
+            log.info("Successfully loaded {} documents from knowledge base", documents.size());
 
         } catch (IOException e) {
-            log.error("Failed to load knowledge base", e);
+            log.error("Failed to load knowledge base from classpath", e);
+        }
+    }
+
+    /**
+     * 读取 Resource 内容为字符串
+     */
+    private String readResourceContent(Resource resource) throws IOException {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+            StringBuilder content = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content.append(line).append("\n");
+            }
+            return content.toString();
         }
     }
 

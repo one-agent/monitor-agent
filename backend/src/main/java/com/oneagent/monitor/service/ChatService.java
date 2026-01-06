@@ -73,15 +73,15 @@ public class ChatService {
                     inputCase.getApiStatus(),
                     inputCase.getApiResponseTime()
             ));
-        }
-
-        if (inputCase.getMonitorLog() != null && !inputCase.getMonitorLog().isEmpty()) {
-            context.append("[最近的监控日志:\n");
-            for (MonitorLog log : inputCase.getMonitorLog()) {
-                context.append(String.format("  - %s: %s (%s)\n",
-                        log.getTimestamp(), log.getStatus(), log.getMsg()));
+        }else{
+            if (monitorService.getRecentLogs() != null && !monitorService.getRecentLogs().isEmpty()) {
+                context.append("[最近的监控日志:\n");
+                for (MonitorLog log : monitorService.getRecentLogs()) {
+                    context.append(String.format("  - %s: %s (%s)\n",
+                            log.getTimestamp(), log.getStatus(), log.getMsg()));
+                }
+                context.append("]\n\n");
             }
-            context.append("]\n\n");
         }
 
         context.append("用户问题: ").append(inputCase.getUserQuery());

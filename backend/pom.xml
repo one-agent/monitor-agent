@@ -21,6 +21,9 @@
     <properties>
         <java.version>17</java.version>
         <agentscope.version>1.0.5</agentscope.version>
+        <!-- Use JUnit 5.10.3 for IntelliJ IDEA compatibility -->
+        <junit-jupiter.version>5.10.3</junit-jupiter.version>
+        <junit-platform.version>1.10.3</junit-platform.version>
     </properties>
 
     <dependencies>
@@ -102,6 +105,14 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+
+        <!-- Test Dependencies - Spring Boot Starter Test includes JUnit 5, Mockito, etc. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
 
     </dependencies>
 

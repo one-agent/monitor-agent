@@ -28,6 +28,8 @@ import io.agentscope.core.studio.StudioMessageHook;
 import io.agentscope.core.tool.Toolkit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -105,12 +107,14 @@ public class AgentConfig {
      * 初始化 RAG 知识库
      */
     @Bean
+    @ConditionalOnBean({EmbeddingModel.class, KnowledgeBaseService.class})
     public SimpleKnowledge ragKnowledge(
-            EmbeddingModel textEmbeddingModel,
+            ObjectProvider<EmbeddingModel> embeddingModelProvider,
             KnowledgeBaseService knowledgeBaseService) {
         
+        EmbeddingModel textEmbeddingModel = embeddingModelProvider.getIfAvailable();
         if (textEmbeddingModel == null) {
-            log.warn("Cannot initialize RAG: embeddingModel is null");
+            log.warn("Cannot initialize RAG: embeddingModel is null or not available");
             return null;
         }
 
@@ -201,8 +205,9 @@ public class AgentConfig {
     public ReActAgent customerServiceAgent(
             OpenAIChatModel chatModel,
             Toolkit toolkit,
-            SimpleKnowledge ragKnowledge) {
+            ObjectProvider<SimpleKnowledge> ragKnowledgeProvider) {
 
+        SimpleKnowledge ragKnowledge = ragKnowledgeProvider.getIfAvailable();
         String systemPrompt = buildSystemPrompt();
 
         ReActAgent.Builder builder = ReActAgent.builder()

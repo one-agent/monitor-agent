@@ -44,12 +44,16 @@ public class MonitorService {
                 .build();
 
         // 如果提供了日志则更新
-        if (logs != null && !logs.isEmpty()) {
-            synchronized (monitorLogs) {
-                monitorLogs.clear();
+        synchronized (monitorLogs) {
+            if (logs != null && !logs.isEmpty()) {
                 monitorLogs.addAll(logs);
+            }else{
+                if("200 OK".equalsIgnoreCase(apiStatus)){
+                    monitorLogs.clear();
+                }
             }
         }
+
 
         log.debug("监控状态已更新: {}", this.currentStatus);
     }

@@ -21,9 +21,6 @@
     <properties>
         <java.version>17</java.version>
         <agentscope.version>1.0.5</agentscope.version>
-        <!-- Use JUnit 5.10.3 for IntelliJ IDEA compatibility -->
-        <junit-jupiter.version>5.10.3</junit-jupiter.version>
-        <junit-platform.version>1.10.3</junit-platform.version>
     </properties>
 
     <dependencies>

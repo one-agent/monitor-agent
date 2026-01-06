@@ -70,7 +70,7 @@ docker-compose ps
 docker-compose logs -f
 
 # 访问应用
-# 前端: http://localhost
+# 前端: http://localhost:5173
 # 后端健康检查: http://localhost:8081/api/health
 ```
 

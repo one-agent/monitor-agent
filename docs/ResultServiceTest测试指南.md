@@ -122,17 +122,19 @@ mvn test -Dtest=ResultServiceTest
 
 ### 环境变量说明
 
-| 变量名 | 说明 | 示例值 | 是否必需 |
-|--------|------|--------|---------|
-| `LLM_API_KEY` | LLM API 密钥 | `your-api-key-here` | 是 |
+| 变量名 | 说明 | 示例值                                      | 是否必需 |
+|--------|------|------------------------------------------|---------|
+| `LLM_API_KEY` | LLM API 密钥 | `your-api-key-here`                      | 是 |
 | `LLM_BASE_URL` | LLM 基础 URL | `https://router.shengsuanyun.com/api/v1` | 是 |
-| `LLM_MODEL_NAME` | LLM 模型名称 | `bigmodel/glm-4.7` | 是 |
-| `EMBEDDING_API_KEY` | Embedding API 密钥 | `your-embedding-api-key-here` | 是 |
+| `LLM_MODEL_NAME` | LLM 模型名称 | `bigmodel/glm-4.7`                       | 是 |
+| `EMBEDDING_API_KEY` | Embedding API 密钥 | `your-embedding-api-key-here`            | 是 |
 | `EMBEDDING_BASE_URL` | Embedding 基础 URL | `https://router.shengsuanyun.com/api/v1` | 是 |
-| `EMBEDDING_MODEL_NAME` | Embedding 模型名称 | `openai/text-embedding-3-small` | 是 |
-| `FEISHU_WEBHOOK_URL` | 飞书 Webhook URL | `https://open.feishu.cn/...` | 是 |
-| `APIFOX_API_TOKEN` | Apifox API Token | `your-apifox-token` | 是 |
-| `APIFOX_PROJECT_ID` | Apifox 项目 ID | `your-project-id` | 是 |
+| `EMBEDDING_MODEL_NAME` | Embedding 模型名称 | `openai/text-embedding-3-small`          | 是 |
+| `FEISHU_WEBHOOK_URL` | 飞书 Webhook URL | `https://open.feishu.cn/...`             | 是 |
+| `APIFOX_API_TOKEN` | Apifox API Token | `your-apifox-token`                      | 是 |
+| `APIFOX_PROJECT_ID` | Apifox 项目 ID | `your-project-id`                        | 是 |
+| `APIFOX_FOLDER_ID` | Apifox 文件夹 ID            | `your-folder-id`                         | 否    |
+| `APIFOX_MODULE_ID` | Apifox 模块 ID             | `your-module-id`                         | 否    |
 
 ### 验证环境变量
 

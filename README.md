@@ -221,7 +221,6 @@ docker-compose top
 | `APIFOX_PROJECT_ID` | Apifox 项目 ID             | - | 是    |
 | `APIFOX_FOLDER_ID` | Apifox 文件夹 ID            | - | 否    |
 | `APIFOX_MODULE_ID` | Apifox 模块 ID             | - | 否    |
-| `SERVER_PORT` | 服务端口                     | `8081` | 否    |
 
 ### 应用配置
 

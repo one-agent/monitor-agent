@@ -3,7 +3,6 @@ package com.oneagent.monitor.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oneagent.monitor.MonitorAgentApplication;
-import com.oneagent.monitor.model.dto.ActionTriggered;
 import com.oneagent.monitor.model.dto.InputCase;
 import com.oneagent.monitor.model.dto.MonitorLog;
 import com.oneagent.monitor.model.dto.ResultCase;
@@ -16,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,8 +43,8 @@ class ResultServiceTest {
         objectMapper = new ObjectMapper();
 
         // 使用项目中的真实目录
-        inputFilePath = java.nio.file.Paths.get("inputs", "inputs.json");
-        outputFilePath = java.nio.file.Paths.get("outputs", "results.json");
+        inputFilePath = Paths.get("inputs", "inputs.json");
+        outputFilePath = Paths.get("outputs", "results.json");
 
         // 确保目录存在
         if (!Files.exists(inputFilePath.getParent())) {

@@ -23,18 +23,9 @@ public class MonitorProperties {
     private ApifoxConfig apifox = new ApifoxConfig();
 
     /**
-     * 知识库配置
-     */
-    private KnowledgeConfig knowledge = new KnowledgeConfig();
-    /**
      * Studio 配置
      */
     private StudioConfig studio = new StudioConfig();
-
-    /**
-     * 输入/输出路径配置
-     */
-    private PathConfig path = new PathConfig();
 
     /**
      * 飞书配置
@@ -56,23 +47,6 @@ public class MonitorProperties {
         private String moduleId;
         private String branchId;
         private String deviceId;
-    }
-
-    /**
-     * 知识库配置
-     */
-    @Data
-    public static class KnowledgeConfig {
-        private String path = "src/main/resources/knowledge";
-    }
-
-    /**
-     * 路径配置
-     */
-    @Data
-    public static class PathConfig {
-        private String inputPath = "inputs/inputs.json";
-        private String outputPath = "outputs/results.json";
     }
 
     /**

@@ -390,6 +390,15 @@ mvn package
 mvn package -DskipTests
 ```
 
+**ResultServiceTest 测试指南**：
+
+详细的测试执行说明请参考 [ResultServiceTest 测试指南](docs/ResultServiceTest测试指南.md)，包含：
+- 测试用例说明
+- Maven 测试命令详解
+- 测试结果查看
+- 常见问题解决
+- CI/CD 集成示例
+
 ### 前端开发
 
 ```bash

@@ -38,7 +38,7 @@ public class MonitorService {
     public void updateStatus(String apiStatus, String responseTime, List<MonitorLog> logs) {
         this.currentStatus = MonitorStatus.builder()
                 .status(apiStatus)
-                .responseTime(StringUtils.isNotBlank(responseTime)?responseTime:"100ms")
+                .responseTime("Unknown".equalsIgnoreCase(responseTime)?"100ms":responseTime)
                 .healthy("200 OK".equalsIgnoreCase(apiStatus))
                 .errorCount(logs != null ? logs.size() : 0)
                 .lastCheckTime(LocalDateTime.now().format(TIME_FORMATTER))

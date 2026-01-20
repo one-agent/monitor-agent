@@ -17,6 +17,11 @@
 - **流式实时响应** - 支持 SSE（Server-Sent Events）实时流式输出
 - **可视化调试** - 集成 AgentScope Studio 可视化工具
 - **ReAct Agent** - 推理-行动模式的智能代理
+## 使用效果
+  <video width="480" height="240" controls>
+    <source src="docs/demo.mp4" type="video/mp4">
+    您的浏览器不支持 Video 标签。
+  </video>
 
 ## 技术栈
 

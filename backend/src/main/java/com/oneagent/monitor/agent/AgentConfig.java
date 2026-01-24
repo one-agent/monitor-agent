@@ -117,14 +117,23 @@ public class AgentConfig {
             log.warn("Cannot initialize RAG: embeddingModel is null or not available");
             return null;
         }
-
         log.info("Initializing RAG knowledge base...");
 
         try {
-            // 创建向量存储
+            // 获取嵌入模型
+            int dimensions = textEmbeddingModel.getDimensions();
+            log.info("Embedding model dimensions: {}", dimensions);
+
+            // 获取配置的维度 - 如果配置为null或0，则尝试通过测试嵌入获取实际维度
+            Integer configDimensions = agentScopeProperties.getEmbedding().getDimensions();
+            int getDimensions = configDimensions != null ? configDimensions:dimensions;
+            // 使用配置的维度，默认值为1536，对应text-embedding-3-small
+            log.info("Using embedding dimensions: {}", getDimensions);
+
+            // 创建向量存储 - 使用配置的维度
             InMemoryStore vectorStore =
                     InMemoryStore.builder()
-                            .dimensions(1536)
+                            .dimensions(getDimensions)
                             .build();
 
             // 创建知识库

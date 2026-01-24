@@ -36,5 +36,6 @@ public class AgentScopeProperties {
         private String baseUrl = "https://api.openai.com/v1";
         private String modelName = "text-embedding-3-small";
         private Boolean enabled = true;
+        private Integer dimensions; // Dimensions for text-embedding-3-small; change based on your model
     }
 }

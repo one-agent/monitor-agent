@@ -53,7 +53,6 @@ public class AgentConfig {
     private final FeishuWebhookTool feishuWebhookTool;
     private final ApifoxApiTool apifoxApiTool;
     private final MonitorCheckTool monitorCheckTool;
-    private final KnowledgeBaseService knowledgeBaseService;
 
     /**
      * 创建兼容 OpenAI 的聊天模型

@@ -17,6 +17,8 @@
 - **流式实时响应** - 支持 SSE（Server-Sent Events）实时流式输出
 - **可视化调试** - 集成 AgentScope Studio 可视化工具
 - **ReAct Agent** - 推理-行动模式的智能代理
+- **智能上下文管理** - 使用AutoContextMemory自动压缩和管理对话历史
+- **内容卸载工具** - 通过ContextOffloadTool实现大内容的离线存储和按需加载
 - **统一会话管理** - 基于AgentScope的SessionManager实现会话持久化
 ## 使用效果
 ![演示动图](docs/demo.gif)

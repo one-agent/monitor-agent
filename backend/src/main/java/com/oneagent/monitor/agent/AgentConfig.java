@@ -12,7 +12,9 @@ import io.agentscope.core.embedding.EmbeddingModel;
 import io.agentscope.core.embedding.openai.OpenAITextEmbedding;
 import io.agentscope.core.formatter.openai.OpenAIChatFormatter;
 import io.agentscope.core.hook.Hook;
-import io.agentscope.core.memory.InMemoryMemory;
+import io.agentscope.core.memory.autocontext.AutoContextConfig;
+import io.agentscope.core.memory.autocontext.AutoContextMemory;
+import io.agentscope.core.memory.autocontext.ContextOffloadTool;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.OpenAIChatModel;
 import io.agentscope.core.rag.RAGMode;
@@ -177,30 +179,30 @@ public class AgentConfig {
     }
 
     /**
-     * 创建包含所有注册工具的工具包
-     */
-    @Bean
-    public Toolkit toolkit(OpenAIChatModel chatModel) {
-        log.info("Creating toolkit and registering tools");
-
-        Toolkit toolkit = new Toolkit();
-
-        // 注册工具实例
-        toolkit.registerTool(feishuWebhookTool);
-        toolkit.registerTool(apifoxApiTool);
-        toolkit.registerTool(monitorCheckTool);
-
-        log.debug("Registered tools: {}", toolkit.getToolNames());
-
-        return toolkit;
-    }
-
-    /**
      * 创建 hook
      */
     public List<Hook> hookList() {
         ToolMonitorHook hook = new ToolMonitorHook();
         return List.of(hook);
+    }
+
+    /**
+     * 基础工具包Bean
+     */
+    @Bean
+    public Toolkit baseToolkit() {
+        log.info("Creating base toolkit and registering core tools");
+
+        Toolkit toolkit = new Toolkit();
+
+        // 注册基础工具实例
+        toolkit.registerTool(feishuWebhookTool);
+        toolkit.registerTool(apifoxApiTool);
+        toolkit.registerTool(monitorCheckTool);
+
+        log.debug("Registered base tools: {}", toolkit.getToolNames());
+
+        return toolkit;
     }
 
     /**
@@ -212,17 +214,39 @@ public class AgentConfig {
     @Scope("prototype")
     public ReActAgent customerServiceAgent(
             OpenAIChatModel chatModel,
-            Toolkit toolkit,
+            Toolkit baseToolkit,
             ObjectProvider<SimpleKnowledge> ragKnowledgeProvider) {
 
         SimpleKnowledge ragKnowledge = ragKnowledgeProvider.getIfAvailable();
         String systemPrompt = buildSystemPrompt();
 
+        // 创建AutoContextMemory配置
+        AutoContextConfig config = AutoContextConfig.builder()
+                .msgThreshold(50)  // 消息数量阈值
+                .tokenRatio(0.5)   // 令牌使用比例
+                .lastKeep(10)      // 保留最后的消息数量
+                .build();
+
+        // 创建AutoContextMemory实例
+        AutoContextMemory memory = new AutoContextMemory(config, chatModel);
+
+        // 基于基础工具包创建Agent专用工具包，并添加ContextOffloadTool
+        Toolkit toolkit = new Toolkit();
+
+        // 复制基础工具
+        for (String toolName : baseToolkit.getToolNames()) {
+            toolkit.registerTool(baseToolkit.getTool(toolName));
+        }
+
+        // 创建并注册ContextOffloadTool
+        ContextOffloadTool offloadTool = new ContextOffloadTool(memory);
+        toolkit.registerTool(offloadTool);
+
         ReActAgent.Builder builder = ReActAgent.builder()
                 .name("CustomerServiceAgent")
                 .model(chatModel)
                 .sysPrompt(systemPrompt)
-                .memory(new InMemoryMemory())
+                .memory(memory)
                 .toolkit(toolkit)
                 .hooks(hookList())
                 .maxIters(10);

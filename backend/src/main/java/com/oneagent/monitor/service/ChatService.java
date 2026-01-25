@@ -1,5 +1,6 @@
 package com.oneagent.monitor.service;
 
+import com.oneagent.monitor.session.SessionManager;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
@@ -9,8 +10,9 @@ import com.oneagent.monitor.model.dto.MonitorLog;
 import com.oneagent.monitor.model.dto.ResultCase;
 import com.oneagent.monitor.tool.ApifoxApiTool;
 import com.oneagent.monitor.tool.FeishuWebhookTool;
-import lombok.RequiredArgsConstructor;
+// import lombok.RequiredArgsConstructor; // Removed to manually define constructor
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -19,13 +21,25 @@ import reactor.core.publisher.Mono;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ChatService {
 
     private final MonitorService monitorService;
-    private final ReActAgent customerServiceAgent;
+    private final ObjectProvider<ReActAgent> customerServiceAgentProvider;
+    private final SessionManager sessionManager;
     private final FeishuWebhookTool feishuWebhookTool;
     private final ApifoxApiTool apifoxApiTool;
+
+    public ChatService(MonitorService monitorService,
+                      ObjectProvider<ReActAgent> customerServiceAgentProvider,
+                      SessionManager sessionManager,
+                      FeishuWebhookTool feishuWebhookTool,
+                      ApifoxApiTool apifoxApiTool) {
+        this.monitorService = monitorService;
+        this.customerServiceAgentProvider = customerServiceAgentProvider;
+        this.sessionManager = sessionManager;
+        this.feishuWebhookTool = feishuWebhookTool;
+        this.apifoxApiTool = apifoxApiTool;
+    }
 
     /**
      * 处理单个查询用例
@@ -33,6 +47,12 @@ public class ChatService {
     public ResultCase processQuery(InputCase inputCase) {
         log.info("处理用例 {}: query={}, apiStatus={}",
                 inputCase.getCaseId(), inputCase.getUserQuery(), inputCase.getApiStatus());
+
+        // 获取或创建Agent实例，并加载会话
+        ReActAgent agent = sessionManager.getOrCreateAgent(
+                inputCase.getCaseId(),
+                customerServiceAgentProvider.getObject()
+        );
 
         // 更新监控服务的当前用例数据
         monitorService.updateStatus(
@@ -51,7 +71,10 @@ public class ChatService {
         String contextualQuery = buildContextualQuery(inputCase);
 
         // 调用 Agent 获取回复
-        String reply = callAgent(contextualQuery);
+        String reply = callAgent(agent, contextualQuery);
+
+        // 保存会话
+        sessionManager.saveSession(inputCase.getCaseId());
 
         log.info("用例 {} 处理完成. 告警触发: {}", inputCase.getCaseId(), actions != null);
 
@@ -132,7 +155,7 @@ public class ChatService {
     /**
      * 调用 Agent 获取回复
      */
-    private String callAgent(String query) {
+    private String callAgent(ReActAgent agent, String query) {
         try {
             Msg message = Msg.builder()
                     .name("user")
@@ -141,7 +164,7 @@ public class ChatService {
                     .build();
 
             // 直接使用 Agent 的 block() 方法，让 StudioMessageHook 能正常追踪
-            Msg response = customerServiceAgent.call(message).block();
+            Msg response = agent.call(message).block();
 
             if (response != null) {
                 String reply = response.getTextContent();
@@ -170,8 +193,14 @@ public class ChatService {
                     .textContent(userQuery)
                     .build();
 
-            Msg response = Mono.from(customerServiceAgent.call(message))
+            ReActAgent agent = sessionManager.getOrCreateAgent(
+                    "default_session",
+                    customerServiceAgentProvider.getObject()
+            );
+            Msg response = Mono.from(agent.call(message))
                     .block();
+            // 保存会话
+            sessionManager.saveSession("default_session");
 
             return response != null ? response.getTextContent() : "未能获取回复";
 

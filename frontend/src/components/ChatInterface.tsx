@@ -151,23 +151,6 @@ export default function ChatInterface({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<any>(null);
 
-  // Load saved messages from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('chat-messages');
-    if (saved) {
-      try {
-        setMessages(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to load saved messages:', e);
-      }
-    }
-  }, []);
-
-  // Save messages to localStorage when they change
-  useEffect(() => {
-    localStorage.setItem('chat-messages', JSON.stringify(messages));
-  }, [messages]);
-
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -372,7 +355,6 @@ export default function ChatInterface({
 
     // 清空前端消息
     setMessages([]);
-    localStorage.removeItem('chat-messages');
   };
 
   const hasMessages = messages.length > 0;

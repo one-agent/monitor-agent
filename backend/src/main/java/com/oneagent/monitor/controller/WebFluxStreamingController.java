@@ -6,6 +6,7 @@ import com.oneagent.monitor.model.dto.InputCase;
 import com.oneagent.monitor.model.entity.MonitorStatus;
 import com.oneagent.monitor.service.ChatService;
 import com.oneagent.monitor.service.MonitorService;
+import com.oneagent.monitor.session.SessionManager;
 import com.oneagent.monitor.util.MsgUtils;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.agent.Event;
@@ -15,8 +16,6 @@ import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.message.ThinkingBlock;
-import io.agentscope.core.session.JsonSession;
-import io.agentscope.core.session.Session;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
@@ -26,11 +25,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -46,17 +43,17 @@ public class WebFluxStreamingController {
     private final ChatService chatService;
     private final MonitorService monitorService;
     private final ObjectProvider<ReActAgent> customerServiceAgentProvider;
-
-    // 会话管理：每个 caseId 对应一个 Agent 实例
-    private final ConcurrentHashMap<String, ReActAgent> agentSessions = new ConcurrentHashMap<>();
+    private final SessionManager sessionManager;
 
     public WebFluxStreamingController(
             ChatService chatService,
             MonitorService monitorService,
-            ObjectProvider<ReActAgent> customerServiceAgentProvider) {
+            ObjectProvider<ReActAgent> customerServiceAgentProvider,
+            SessionManager sessionManager) {
         this.chatService = chatService;
         this.monitorService = monitorService;
         this.customerServiceAgentProvider = customerServiceAgentProvider;
+        this.sessionManager = sessionManager;
     }
 
     /**
@@ -66,18 +63,11 @@ public class WebFluxStreamingController {
     public Flux<ServerSentEvent<String>> processRequest(@RequestBody InputCase inputCase) {
         log.info("处理流式请求: caseId={}", inputCase.getCaseId());
 
-        // 根据 caseId 获取或创建 Agent 实例（同一个聊天框使用同一个 Agent）
-        ReActAgent customerServiceAgent = agentSessions.computeIfAbsent(
+        // 使用SessionManager获取或创建Agent实例，并自动加载会话
+        ReActAgent customerServiceAgent = sessionManager.getOrCreateAgent(
                 inputCase.getCaseId(),
-                id -> {
-                    log.info("为会话 {} 创建新的 Agent 实例", id);
-                    return customerServiceAgentProvider.getObject();
-                }
+                customerServiceAgentProvider.getObject()
         );
-
-        // 创建 Session 并加载已有会话
-        Session session = new JsonSession(Path.of(System.getProperty("user.home"), ".agentscope", "sessions", "monitor"));
-        customerServiceAgent.loadIfExists(session, inputCase.getCaseId());
 
         // 更新监控服务
         monitorService.updateStatus(
@@ -117,8 +107,8 @@ public class WebFluxStreamingController {
                 .subscribeOn(Schedulers.boundedElastic())
                 .doFinally(
                         signalType -> {
-                            // Save session after completion using SessionLoader
-                            customerServiceAgent.saveTo(session, inputCase.getCaseId());
+                            // 使用SessionManager保存会话
+                            sessionManager.saveSession(inputCase.getCaseId());
                         })
                 .flatMap(
                     event -> {
@@ -165,9 +155,9 @@ public class WebFluxStreamingController {
                                                 .data(toJson(text))
                                                 .build()
                                 );
-                            }                                    
+                            }
                             return Flux.fromIterable(events);
-                        } else {                                        
+                        } else {
                             // Other event types - treat as content
                             String textContent = MsgUtils.getTextContent(event.getMessage());
                             return Flux.just(
@@ -204,7 +194,7 @@ public class WebFluxStreamingController {
      */
     @PostMapping("/session/reset/{caseId}")
     public Mono<Map<String, String>> resetSession(@PathVariable String caseId) {
-        agentSessions.remove(caseId);
+        sessionManager.deleteSession(caseId);
         log.info("已重置会话: {}", caseId);
         return Mono.just(Map.of(
                 "status", "success",

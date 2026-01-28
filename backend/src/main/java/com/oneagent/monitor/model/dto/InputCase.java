@@ -45,5 +45,10 @@ public class InputCase {
     @JsonProperty("monitor_log")
     private List<MonitorLog> monitorLog;
 
+    /**
+     * 图片数据列表 (base64 编码)
+     */
+    @JsonProperty("images")
+    private List<String> images;
 
 }

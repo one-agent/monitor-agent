@@ -12,10 +12,7 @@ import io.agentscope.core.ReActAgent;
 import io.agentscope.core.agent.Event;
 import io.agentscope.core.agent.EventType;
 import io.agentscope.core.agent.StreamOptions;
-import io.agentscope.core.message.Msg;
-import io.agentscope.core.message.MsgRole;
-import io.agentscope.core.message.TextBlock;
-import io.agentscope.core.message.ThinkingBlock;
+import io.agentscope.core.message.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
@@ -57,11 +54,12 @@ public class WebFluxStreamingController {
     }
 
     /**
-     * 处理流式请求 - 使用 WebFlux Flux<ServerSentEvent>
+     * 处理流式请求 - 使用 WebFlux Flux<ServerSentEvent> - 接收JSON请求体（包含图片数据）
      */
     @PostMapping(value = "/process", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> processRequest(@RequestBody InputCase inputCase) {
         log.info("处理流式请求: caseId={}", inputCase.getCaseId());
+        log.info("图片数量: {}", inputCase.getImages() != null ? inputCase.getImages().size() : 0);
 
         // 使用SessionManager获取或创建Agent实例，并自动加载会话
         ReActAgent customerServiceAgent = sessionManager.getOrCreateAgent(
@@ -85,12 +83,8 @@ public class WebFluxStreamingController {
         // 构建带有上下文的查询
         String contextualQuery = chatService.buildContextualQuery(inputCase);
 
-        // 构建消息
-        Msg message = Msg.builder()
-                .name("user")
-                .role(MsgRole.USER)
-                .textContent(contextualQuery)
-                .build();
+        // 构建消息 - 支持多模态
+        Msg message = buildMultimodalMessage(contextualQuery, inputCase.getImages());
 
         // Configure streaming options - INCREMENTAL mode for SSE
         StreamOptions streamOptions =
@@ -168,6 +162,53 @@ public class WebFluxStreamingController {
                             );
                         }
                     })            .filter(sseEvent -> sseEvent.data() != null && !sseEvent.data().isEmpty());
+    }
+
+    /**
+     * 构建支持多模态的消息
+     */
+    private Msg buildMultimodalMessage(String textContent, List<String> base64Images) {
+        List<ContentBlock> contentBlocks = new ArrayList<>();
+
+        // 添加文本内容
+        if (textContent != null && !textContent.isEmpty()) {
+            contentBlocks.add(TextBlock.builder().text(textContent).build());
+        }
+
+        // 添加图片内容
+        if (base64Images != null && !base64Images.isEmpty()) {
+            for (String base64Image : base64Images) {
+                // 从 base64 数据中提取 MIME 类型
+                String mediaType = "image/png"; // 默认值
+                if (base64Image.startsWith("data:image/")) {
+                    int endTypeIndex = base64Image.indexOf(";");
+                    if (endTypeIndex > 11) { // "data:image/".length() = 11
+                        mediaType = base64Image.substring(5, endTypeIndex); // "data:image/".length() = 5
+                    }
+                }
+
+                // 提取 base64 数据部分（去掉 "data:image/png;base64," 这样的前缀）
+                String base64Data = base64Image;
+                if (base64Image.contains(",")) {
+                    base64Data = base64Image.split(",", 2)[1];
+                }
+
+                ContentBlock imageBlock = ImageBlock.builder()
+                    .source(Base64Source.builder()
+                        .data(base64Data)
+                        .mediaType(mediaType)
+                        .build())
+                    .build();
+
+                contentBlocks.add(imageBlock);
+            }
+        }
+
+        return Msg.builder()
+                .name("user")
+                .role(MsgRole.USER)
+                .content(contentBlocks)
+                .build();
     }
 
     /**

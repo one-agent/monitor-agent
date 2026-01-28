@@ -4,14 +4,15 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Input, Button, Empty, Card, Spin } from 'antd';
+import { Input, Button, Empty, Card, Spin, Upload } from 'antd';
 import {
   SendOutlined,
   DeleteOutlined,
   RobotOutlined,
   UserOutlined,
   CopyOutlined,
-  CheckOutlined
+  CheckOutlined,
+  UploadOutlined
 } from '@ant-design/icons';
 import { processRequestStream, resetSession } from '../services/api';
 import type { Message, MonitorLog } from '../types';
@@ -147,6 +148,7 @@ export default function ChatInterface({
   const [customApiStatus, setCustomApiStatus] = useState(apiStatus);
   const [customApiResponseTime, setCustomApiResponseTime] = useState(apiResponseTime);
   const [showSettings, setShowSettings] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<any>(null);
@@ -160,18 +162,19 @@ export default function ChatInterface({
 
   const handleSend = async () => {
     const content = inputValue.trim();
-    if (!content || loading) return;
+    if ((!content && images.length === 0) || loading) return;
 
     // Add user message
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content,
+      content: content + (images.length > 0 ? ` [已上传${images.length}张图片]` : ''),
       timestamp: new Date().toISOString()
     };
 
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
+    setImages([]); // 清空图片
     setLoading(true);
 
     // 立即聚焦到输入框
@@ -208,7 +211,8 @@ export default function ChatInterface({
           user_query: content,
           api_status: customApiStatus,
           api_response_time: customApiResponseTime,
-          monitor_log: currentMonitorLogs
+          monitor_log: currentMonitorLogs,
+          images: images // 添加图片数据
         },
         // onChunk - update message content in real-time
         (chunk: string) => {
@@ -221,17 +225,17 @@ export default function ChatInterface({
 
               const newMessages = [...prev];
               newMessages[msgIndex] = { ...prev[msgIndex], content: newContent };
-              
+
               // 如果接收到非工具结果的内容，且之前还没有标记为思考完成，则标记为完成
               if (!chunk.startsWith('\n\n> 🔧') && !prev[msgIndex].isThinkingDone) {
                 newMessages[msgIndex] = { ...newMessages[msgIndex], isThinkingDone: true };
               }
-              
+
               // 如果接收到非工具结果的内容，且之前还没有标记为工具结果完成，则标记为完成
               if (!chunk.startsWith('\n\n> 🔧') && !prev[msgIndex].isToolResultsDone) {
                 newMessages[msgIndex] = { ...newMessages[msgIndex], isToolResultsDone: true };
               }
-              
+
               return newMessages;
             }
             return prev;
@@ -296,8 +300,8 @@ export default function ChatInterface({
             if (msgIndex !== -1) {
               const currentToolResults = prev[msgIndex].toolResults || [];
               const newMessages = [...prev];
-              newMessages[msgIndex] = { 
-                ...prev[msgIndex], 
+              newMessages[msgIndex] = {
+                ...prev[msgIndex],
                 toolResults: [...currentToolResults, toolResult]
               };
               return newMessages;
@@ -541,16 +545,41 @@ export default function ChatInterface({
             disabled={loading}
             className="message-input"
           />
-          <Button
-            type="primary"
-            icon={<SendOutlined />}
-            onClick={handleSend}
-            disabled={!inputValue.trim() || loading}
-            loading={loading}
-            className="send-btn"
-          >
-            Send
-          </Button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+            <Upload
+              multiple
+              accept="image/*"
+              showUploadList={true}
+              beforeUpload={(file) => {
+                // 将图片转换为 base64
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  const base64String = e.target?.result as string;
+                  setImages(prev => [...prev, base64String]);
+                };
+                reader.readAsDataURL(file);
+                return false; // 阻止默认上传行为
+              }}
+              maxCount={5} // 限制最多上传5张图片
+            >
+              <Button
+                icon={<UploadOutlined />}
+                disabled={loading}
+              >
+                Upload Image
+              </Button>
+            </Upload>
+            <Button
+              type="primary"
+              icon={<SendOutlined />}
+              onClick={handleSend}
+              disabled={(!inputValue.trim() && images.length === 0) || loading}
+              loading={loading}
+              className="send-btn"
+            >
+              Send
+            </Button>
+          </div>
         </div>
         <div className="input-hint">
           Press Enter to send, Shift+Enter for new line

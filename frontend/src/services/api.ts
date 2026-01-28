@@ -25,8 +25,9 @@ export const processRequestStream: StreamRequestHandler = async (
 ) => {
   console.log('Starting stream request:', data);
   let eventCount = 0;
+
   try {
-    // 使用 WebFlux 端点进行流式响应
+    // 始终使用 JSON 请求，将图片作为 base64 字符串包含在数据中
     const response = await fetch(`${API_BASE_URL}/process`, {
       method: 'POST',
       headers: {
@@ -34,8 +35,12 @@ export const processRequestStream: StreamRequestHandler = async (
         'Accept': 'text/event-stream',
         'Cache-Control': 'no-cache',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(data), // 直接发送包含图片数据的 JSON
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -233,4 +238,50 @@ export async function resetSession(caseId: string): Promise<{ status: string; me
   }
 
   return response.json();
+}
+
+/**
+ * 从 data URL 提取 MIME 类型和数据部分
+ */
+function extractMimeTypeAndData(dataUrl: string): [string, string] {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (match) {
+    return [match[1], match[2]];
+  }
+  return ['image/png', dataUrl]; // 默认为 PNG
+}
+
+/**
+ * 从 MIME 类型获取文件扩展名
+ */
+function getFileType(mimeType: string): string {
+  const mimeToExt: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'image/webp': 'webp',
+    'image/svg+xml': 'svg'
+  };
+  return mimeToExt[mimeType] || 'png';
+}
+
+/**
+ * 将 data URL 转换为 Blob 对象
+ */
+function dataURLtoBlob(dataUrl: string): Blob {
+  const [mimeType, base64Data] = extractMimeTypeAndData(dataUrl);
+  const byteCharacters = atob(base64Data);
+  const byteArrays = [];
+
+  for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+    const slice = byteCharacters.slice(offset, offset + 512);
+    const byteNumbers = new Array(slice.length);
+    for (let i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    byteArrays.push(byteArray);
+  }
+  return new Blob(byteArrays, { type: mimeType });
 }

@@ -33,6 +33,7 @@ export interface ProcessRequest {
   api_status: string;
   api_response_time: string;
   monitor_log: MonitorLog[];
+  images?: string[]; // 支持多图片上传
 }
 
 export interface ProcessResponse {

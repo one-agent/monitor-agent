@@ -13,6 +13,7 @@
 - **实时状态监控** - 持续监听 API 状态，检测异常
 - **自动告警通知** - 通过飞书 Webhook 发送富文本卡片告警
 - **故障文档生成** - 自动创建故障记录文档到 Apifox
+- **Uptime Kuma 集成** - 接收 Uptime Kuma Webhook 通知，支持多级别告警和恢复通知
 - **自我感知能力** - 引用真实监控日志数据回答系统状态问题
 - **流式实时响应** - 支持 SSE（Server-Sent Events）实时流式输出
 - **可视化调试** - 集成 AgentScope Studio 可视化工具
@@ -384,8 +385,8 @@ monitor-agent/
 |-------|------|------|
 | `/api/process` | POST | 流式处理请求（SSE） |
 | `/api/health` | GET | 健康检查 |
-| `/api/monitor/status` | GET | 获取监控状态 |
 | `/api/session/reset/{caseId}` | POST | 重置指定会话 |
+| `/api/webhook/uptime-kuma` | POST | 接收 Uptime Kuma Webhook 通知 |
 
 ## 开发
 

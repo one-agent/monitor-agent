@@ -150,12 +150,199 @@ public class ApifoxApiTool {
     }
 
     /**
+     * 创建带详细信息的 Apifox 故障记录文档（用于 Uptime Kuma）
+     * 
+     * @param timestamp 故障时间
+     * @param errorCode 错误代码
+     * @param errorMsg 错误消息
+     * @param latency 响应延迟
+     * @param alertLevel 告警级别
+     * @param monitorName 监控项名称
+     * @param monitorUrl 监控项 URL
+     * @param monitorType 监控项类型
+     * @return 文档 ID
+     */
+    public String createApifoxDocumentWithDetails(
+            String timestamp,
+            String errorCode,
+            String errorMsg,
+            String latency,
+            com.oneagent.monitor.model.dto.AlertLevel alertLevel,
+            String monitorName,
+            String monitorUrl,
+            String monitorType
+    ) {
+        log.info("Creating Apifox document with details: monitorName={}, level={}, code={}",
+                monitorName, alertLevel, errorCode);
+
+        String apiToken = monitorProperties.getApifox().getApiToken();
+        String projectId = monitorProperties.getApifox().getProjectId();
+        String folderId = monitorProperties.getApifox().getFolderId();
+        String moduleId = monitorProperties.getApifox().getModuleId();
+
+        String result;
+        // 检查是否已配置
+        if (apiToken == null || apiToken.contains("your-apifox-token-here") ||
+            projectId == null || projectId.contains("your-project-id-here")) {
+            String docId = "DOC_" + UUID.randomUUID().toString().substring(0, 8);
+            String msg = String.format(
+                    "Apifox API not fully configured. Simulation: docId=%s, monitorName=%s, level=%s",
+                    docId, monitorName, alertLevel);
+            log.warn(msg);
+            result = docId;
+            return wrapResult(result);
+        }
+
+        try {
+            String docTitle = String.format("[%s] %s - %s",
+                    alertLevel.getDescription(), monitorName,
+                    LocalDateTime.now().format(DOC_TIME_FORMATTER));
+            String docId = generateDocIdWithMonitor(monitorName, alertLevel.name());
+
+            // 使用 form-urlencoded 格式构建请求体
+            String formData = buildFormDataWithDetails(
+                    docTitle, folderId, moduleId, timestamp, errorCode, errorMsg, latency,
+                    alertLevel, monitorName, monitorUrl, monitorType
+            );
+
+            String apiUrl = monitorProperties.getApifox().getApiUrl() + "/api/v1/doc?locale=zh-CN";
+
+            RequestBody body = RequestBody.create(formData, FORM);
+            Request request = new Request.Builder()
+                    .url(apiUrl)
+                    .addHeader("Authorization", "Bearer " + apiToken)
+                    .addHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
+                    .addHeader("Accept", "application/json")
+                    .addHeader("x-project-id", projectId)
+                    .post(body)
+                    .build();
+
+            try (Response response = httpClient.newCall(request).execute()) {
+                if (response.isSuccessful() && response.body() != null) {
+                    String responseBody = response.body().string();
+                    JsonNode jsonNode = objectMapper.readTree(responseBody);
+                    if (jsonNode.has("success") && jsonNode.get("success").asBoolean() &&
+                        jsonNode.has("data") && jsonNode.get("data").has("id")) {
+                        String actualDocId = jsonNode.get("data").get("id").asText();
+                        log.info("Apifox document created successfully with details: {}", actualDocId);
+                        result = actualDocId;
+                    } else {
+                        result = docId;
+                    }
+                } else {
+                    log.error("Failed to create Apifox document: code={}", response.code());
+                    result = docId;
+                }
+            }
+        } catch (IOException e) {
+            log.error("Error creating Apifox document with details", e);
+            result = generateDocIdWithMonitor(monitorName, alertLevel.name());
+        }
+
+        return wrapResult(result);
+    }
+
+    /**
+     * 创建 Apifox 恢复通知文档（用于 Uptime Kuma）
+     * 
+     * @param timestamp 恢复时间
+     * @param latency 响应延迟
+     * @param monitorName 监控项名称
+     * @param monitorUrl 监控项 URL
+     * @param monitorType 监控项类型
+     * @return 文档 ID
+     */
+    public String createApifoxRecoveryDocument(
+            String timestamp,
+            String latency,
+            String monitorName,
+            String monitorUrl,
+            String monitorType
+    ) {
+        log.info("Creating Apifox recovery document: monitorName={}", monitorName);
+
+        String apiToken = monitorProperties.getApifox().getApiToken();
+        String projectId = monitorProperties.getApifox().getProjectId();
+        String folderId = monitorProperties.getApifox().getFolderId();
+        String moduleId = monitorProperties.getApifox().getModuleId();
+
+        String result;
+        // 检查是否已配置
+        if (apiToken == null || apiToken.contains("your-apifox-token-here") ||
+            projectId == null || projectId.contains("your-project-id-here")) {
+            String docId = "DOC_" + UUID.randomUUID().toString().substring(0, 8);
+            String msg = String.format(
+                    "Apifox API not fully configured. Simulation: docId=%s, monitorName=%s",
+                    docId, monitorName);
+            log.warn(msg);
+            result = docId;
+            return wrapResult(result);
+        }
+
+        try {
+            String docTitle = String.format("[恢复通知] %s - %s",
+                    monitorName, LocalDateTime.now().format(DOC_TIME_FORMATTER));
+            String docId = generateDocIdWithMonitor(monitorName, "RECOVERY");
+
+            // 使用 form-urlencoded 格式构建请求体
+            String formData = buildFormDataRecovery(
+                    docTitle, folderId, moduleId, timestamp, latency,
+                    monitorName, monitorUrl, monitorType
+            );
+
+            String apiUrl = monitorProperties.getApifox().getApiUrl() + "/api/v1/doc?locale=zh-CN";
+
+            RequestBody body = RequestBody.create(formData, FORM);
+            Request request = new Request.Builder()
+                    .url(apiUrl)
+                    .addHeader("Authorization", "Bearer " + apiToken)
+                    .addHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
+                    .addHeader("Accept", "application/json")
+                    .addHeader("x-project-id", projectId)
+                    .post(body)
+                    .build();
+
+            try (Response response = httpClient.newCall(request).execute()) {
+                if (response.isSuccessful() && response.body() != null) {
+                    String responseBody = response.body().string();
+                    JsonNode jsonNode = objectMapper.readTree(responseBody);
+                    if (jsonNode.has("success") && jsonNode.get("success").asBoolean() &&
+                        jsonNode.has("data") && jsonNode.get("data").has("id")) {
+                        String actualDocId = jsonNode.get("data").get("id").asText();
+                        log.info("Apifox recovery document created successfully: {}", actualDocId);
+                        result = actualDocId;
+                    } else {
+                        result = docId;
+                    }
+                } else {
+                    log.error("Failed to create Apifox recovery document: code={}", response.code());
+                    result = docId;
+                }
+            }
+        } catch (IOException e) {
+            log.error("Error creating Apifox recovery document", e);
+            result = generateDocIdWithMonitor(monitorName, "RECOVERY");
+        }
+
+        return wrapResult(result);
+    }
+
+    /**
      * 根据错误代码生成文档 ID
      */
     private String generateDocId(String errorCode) {
         String cleanCode = errorCode.replaceAll("[^A-Za-z0-9]", "_");
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         return "DOC_" + timestamp + "_" + cleanCode;
+    }
+
+    /**
+     * 根据监控项名称和级别生成文档 ID
+     */
+    private String generateDocIdWithMonitor(String monitorName, String level) {
+        String cleanName = monitorName.replaceAll("[^A-Za-z0-9]", "_");
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        return "DOC_" + timestamp + "_" + cleanName + "_" + level;
     }
 
     /**
@@ -215,5 +402,132 @@ public class ApifoxApiTool {
                 ## 备注
                 此文档由智能客服监控 Agent 自动生成。
                 """, timestamp, errorCode, latency, errorMsg != null ? errorMsg : "N/A");
+    }
+
+    /**
+     * 构建带详细信息的 form-urlencoded 请求体
+     */
+    private String buildFormDataWithDetails(String docTitle, String folderId, String moduleId,
+                                            String timestamp, String errorCode, String errorMsg, String latency,
+                                            com.oneagent.monitor.model.dto.AlertLevel alertLevel,
+                                            String monitorName, String monitorUrl, String monitorType) {
+        StringBuilder formData = new StringBuilder();
+        formData.append("name=").append(urlEncode(docTitle));
+
+        if (moduleId != null && !moduleId.trim().isEmpty()) {
+            formData.append("&moduleId=").append(urlEncode(moduleId));
+        }
+
+        String markdownContent = buildDocContentWithDetails(
+                timestamp, errorCode, errorMsg, latency, alertLevel,
+                monitorName, monitorUrl, monitorType
+        );
+        formData.append("&content=").append(urlEncode(markdownContent));
+
+        if (folderId != null && !folderId.trim().isEmpty()) {
+            formData.append("&folderId=").append(urlEncode(folderId));
+        }
+
+        return formData.toString();
+    }
+
+    /**
+     * 构建恢复通知的 form-urlencoded 请求体
+     */
+    private String buildFormDataRecovery(String docTitle, String folderId, String moduleId,
+                                         String timestamp, String latency,
+                                         String monitorName, String monitorUrl, String monitorType) {
+        StringBuilder formData = new StringBuilder();
+        formData.append("name=").append(urlEncode(docTitle));
+
+        if (moduleId != null && !moduleId.trim().isEmpty()) {
+            formData.append("&moduleId=").append(urlEncode(moduleId));
+        }
+
+        String markdownContent = buildDocContentRecovery(
+                timestamp, latency, monitorName, monitorUrl, monitorType
+        );
+        formData.append("&content=").append(urlEncode(markdownContent));
+
+        if (folderId != null && !folderId.trim().isEmpty()) {
+            formData.append("&folderId=").append(urlEncode(folderId));
+        }
+
+        return formData.toString();
+    }
+
+    /**
+     * 构建带详细信息的 Markdown 格式文档内容
+     */
+    private String buildDocContentWithDetails(String timestamp, String errorCode, String errorMsg, String latency,
+                                               com.oneagent.monitor.model.dto.AlertLevel alertLevel,
+                                               String monitorName, String monitorUrl, String monitorType) {
+        return String.format("""
+                # %s %s
+
+                ## 基本信息
+                - **监控项名称**: %s
+                - **告警级别**: %s
+                - **故障时间**: %s
+                - **错误代码**: %s
+                - **当前延迟**: %s
+                %s
+                %s
+
+                ## 错误详情
+                %s
+
+                ## 处理状态
+                - [ ] 已确认
+                - [ ] 正在处理
+                - [ ] 已解决
+
+                ## 备注
+                此文档由智能客服监控 Agent 自动生成，基于 Uptime Kuma 监控数据。
+                """,
+                alertLevel.getEmoji(),
+                alertLevel.getDescription(),
+                monitorName,
+                alertLevel.name(),
+                timestamp,
+                errorCode,
+                latency,
+                monitorUrl != null && !monitorUrl.isEmpty()
+                        ? "- **监控地址**: " + monitorUrl + "\n" : "",
+                monitorType != null && !monitorType.isEmpty()
+                        ? "- **监控类型**: " + monitorType + "\n" : "",
+                errorMsg != null ? errorMsg : "N/A"
+        );
+    }
+
+    /**
+     * 构建恢复通知的 Markdown 格式文档内容
+     */
+    private String buildDocContentRecovery(String timestamp, String latency,
+                                           String monitorName, String monitorUrl, String monitorType) {
+        return String.format("""
+                # 🟢 服务恢复通知
+
+                ## 基本信息
+                - **监控项名称**: %s
+                - **恢复时间**: %s
+                - **响应延迟**: %s
+                %s
+                %s
+
+                ## 状态
+                - ✅ 服务已恢复正常运行
+
+                ## 备注
+                此文档由智能客服监控 Agent 自动生成，基于 Uptime Kuma 监控数据。
+                """,
+                monitorName,
+                timestamp,
+                latency,
+                monitorUrl != null && !monitorUrl.isEmpty()
+                        ? "- **监控地址**: " + monitorUrl + "\n" : "",
+                monitorType != null && !monitorType.isEmpty()
+                        ? "- **监控类型**: " + monitorType + "\n" : ""
+        );
     }
 }

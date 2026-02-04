@@ -5,12 +5,14 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 监控 Agent 主应用程序类
  */
 @Slf4j
 @SpringBootApplication
+@EnableScheduling
 public class MonitorAgentApplication {
 
     public static void main(String[] args) {
@@ -30,6 +32,7 @@ public class MonitorAgentApplication {
         log.info("  - GET  /api/monitor/status     : 获取监控状态");
         log.info("  - GET  /api/health            : 健康检查");
         log.info("  - POST /api/session/reset/{caseId} : 重置指定会话");
+        log.info("  - POST /api/webhook/uptime-kuma : Uptime Kuma Webhook 接收");
         log.info("=========================================");
     }
 }

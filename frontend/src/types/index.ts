@@ -47,14 +47,6 @@ export interface ActionTriggered {
   apifox_doc_id?: string;
 }
 
-export interface MonitorStatus {
-  status: string;
-  responseTime: string;
-  healthy: boolean;
-  errorCount: number;
-  lastCheckTime: string;
-}
-
 /**
  * SSE 事件类型
  */

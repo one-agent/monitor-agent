@@ -5,7 +5,6 @@
 import type {
   ProcessRequest,
   ProcessResponse,
-  MonitorStatus,
   StreamRequestHandler
 } from '../types';
 
@@ -198,19 +197,6 @@ export const processRequestStream: StreamRequestHandler = async (
  * @deprecated Use processRequestStream instead
  */
 // Removed unused processRequest function
-
-/**
- * Get the current system monitoring status
- */
-export async function getMonitorStatus(): Promise<MonitorStatus> {
-  const response = await fetch(`${API_BASE_URL}/monitor/status`);
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  return response.json();
-}
 
 /**
  * Check if the backend service is healthy

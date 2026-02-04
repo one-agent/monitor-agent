@@ -2,6 +2,7 @@ package com.oneagent.monitor.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -11,6 +12,7 @@ import java.util.List;
  * 处理用户查询的输入用例 DTO
  */
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class InputCase {

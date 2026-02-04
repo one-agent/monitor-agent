@@ -5,6 +5,7 @@ import io.agentscope.core.ReActAgent;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import com.oneagent.monitor.model.dto.ActionTriggered;
+import com.oneagent.monitor.model.dto.AlertLevel;
 import com.oneagent.monitor.model.dto.InputCase;
 import com.oneagent.monitor.model.dto.MonitorLog;
 import com.oneagent.monitor.model.dto.ResultCase;
@@ -54,20 +55,8 @@ public class ChatService {
                 customerServiceAgentProvider.getObject()
         );
 
-        // 更新监控服务的当前用例数据
-        monitorService.updateStatus(
-                inputCase.getApiStatus(),
-                inputCase.getApiResponseTime(),
-                inputCase.getMonitorLog()
-        );
-
-        // 检查是否需要告警
-        ActionTriggered actions = null;
-        if (monitorService.needsAlert(inputCase.getApiStatus())) {
-            actions = handleApiAlert(inputCase);
-        }
-
         // 构建带有上下文的 Agent 消息
+        // Agent 可以根据上下文自主决定是否需要调用监控工具
         String contextualQuery = buildContextualQuery(inputCase);
 
         // 调用 Agent 获取回复
@@ -76,11 +65,9 @@ public class ChatService {
         // 保存会话
         sessionManager.saveSession(inputCase.getCaseId());
 
-        log.info("用例 {} 处理完成. 告警触发: {}", inputCase.getCaseId(), actions != null);
+        log.info("用例 {} 处理完成", inputCase.getCaseId());
 
-        return actions != null
-                ? ResultCase.withActions(inputCase.getCaseId(), reply, actions)
-                : ResultCase.withReply(inputCase.getCaseId(), reply);
+        return ResultCase.withReply(inputCase.getCaseId(), reply);
     }
 
     /**
@@ -89,22 +76,26 @@ public class ChatService {
     public String buildContextualQuery(InputCase inputCase) {
         StringBuilder context = new StringBuilder();
 
-        // 添加监控上下文
-        if (!"200 OK".equalsIgnoreCase(inputCase.getApiStatus())) {
+        // 添加监控上下文信息（仅供参考，不自动更新状态）
+        if (inputCase.getApiStatus() != null && !"200 OK".equalsIgnoreCase(inputCase.getApiStatus())) {
             context.append(String.format(
-                    "[系统状态提醒: 当前API状态异常 - %s, 响应时间: %s]\n\n",
+                    "[系统状态提醒: 当前API状态异常 - %s, 响应时间: %s]\n",
                     inputCase.getApiStatus(),
                     inputCase.getApiResponseTime()
             ));
-        }else{
-            if (monitorService.getRecentLogs() != null && !monitorService.getRecentLogs().isEmpty()) {
-                context.append("[最近的监控日志:\n");
-                for (MonitorLog log : monitorService.getRecentLogs()) {
-                    context.append(String.format("  - %s: %s (%s)\n",
+            
+            // 如果有监控日志，也添加到上下文中
+            if (inputCase.getMonitorLog() != null && !inputCase.getMonitorLog().isEmpty()) {
+                context.append("[监控日志:\n");
+                for (MonitorLog log : inputCase.getMonitorLog()) {
+                    context.append(String.format("  - %s: %s - %s\n",
                             log.getTimestamp(), log.getStatus(), log.getMsg()));
                 }
-                context.append("]\n\n");
+                context.append("]\n");
             }
+            
+            // 提示 Agent 可以使用监控工具
+            context.append("提示：可以使用 check_monitor_status、get_monitor_logs 或 send_uptime_kuma_alert 工具获取更多信息或发送告警。\n\n");
         }
 
         context.append("用户问题: ").append(inputCase.getUserQuery());
@@ -148,6 +139,116 @@ public class ChatService {
         actions.apifoxDocId(docId);
 
         log.info("告警动作完成: feishu={}, docId={}", feishuResult, docId);
+
+        return actions.build();
+    }
+
+    /**
+     * 处理 Uptime Kuma 告警
+     * 
+     * @param inputCase 输入用例
+     * @param webhookData Uptime Kuma Webhook 数据
+     * @return 触发的动作
+     */
+    public ActionTriggered handleUptimeKumaAlert(
+            InputCase inputCase,
+            com.oneagent.monitor.model.dto.UptimeKumaWebhookDTO webhookData) {
+
+        AlertLevel alertLevel = webhookData.getAlertLevel();
+        log.warn("Uptime Kuma 告警触发: monitorId={}, monitorName={}, level={}, status={}",
+                webhookData.getMonitorIdStr(),
+                webhookData.getMonitorName(),
+                alertLevel,
+                webhookData.getHeartbeat() != null ? webhookData.getHeartbeat().getStatus() : "unknown");
+
+        ActionTriggered.ActionTriggeredBuilder actions = ActionTriggered.builder();
+
+        // 获取错误信息
+        String errorMsg = webhookData.getErrorMessage();
+        String errorTime = webhookData.getHeartbeatTime();
+        String monitorName = webhookData.getMonitorName();
+        String monitorUrl = webhookData.getMonitorUrl();
+        String monitorType = webhookData.getMonitorType();
+
+        // 发送飞书告警（带告警级别）
+        String feishuResult = feishuWebhookTool.sendFeishuAlertWithLevel(
+                errorTime,
+                inputCase.getApiStatus(),
+                inputCase.getApiResponseTime(),
+                alertLevel,
+                monitorName,
+                monitorUrl,
+                monitorType,
+                errorMsg
+        );
+        actions.feishuWebhook(feishuResult);
+
+        // 创建 Apifox 文档
+        String docId = apifoxApiTool.createApifoxDocumentWithDetails(
+                errorTime,
+                inputCase.getApiStatus(),
+                errorMsg,
+                inputCase.getApiResponseTime(),
+                alertLevel,
+                monitorName,
+                monitorUrl,
+                monitorType
+        );
+        actions.apifoxDocId(docId);
+
+        log.info("Uptime Kuma 告警动作完成: feishu={}, docId={}, level={}",
+                feishuResult, docId, alertLevel);
+
+        return actions.build();
+    }
+
+    /**
+     * 处理 Uptime Kuma 恢复通知
+     * 
+     * @param inputCase 输入用例
+     * @param webhookData Uptime Kuma Webhook 数据
+     * @return 触发的动作
+     */
+    public ActionTriggered handleUptimeKumaRecovery(
+            InputCase inputCase,
+            com.oneagent.monitor.model.dto.UptimeKumaWebhookDTO webhookData) {
+
+        log.info("Uptime Kuma 恢复通知: monitorId={}, monitorName={}",
+                webhookData.getMonitorIdStr(),
+                webhookData.getMonitorName());
+
+        ActionTriggered.ActionTriggeredBuilder actions = ActionTriggered.builder();
+
+        // 获取恢复信息
+        String recoveryTime = webhookData.getHeartbeatTime();
+        String monitorName = webhookData.getMonitorName();
+        String monitorUrl = webhookData.getMonitorUrl();
+        String monitorType = webhookData.getMonitorType();
+        String responseTime = webhookData.getResponseTime() > 0
+                ? webhookData.getResponseTime() + "ms"
+                : "Unknown";
+
+        // 发送飞书恢复通知
+        String feishuResult = feishuWebhookTool.sendFeishuRecovery(
+                recoveryTime,
+                responseTime,
+                monitorName,
+                monitorUrl,
+                monitorType
+        );
+        actions.feishuWebhook(feishuResult);
+
+        // 创建 Apifox 恢复文档
+        String docId = apifoxApiTool.createApifoxRecoveryDocument(
+                recoveryTime,
+                responseTime,
+                monitorName,
+                monitorUrl,
+                monitorType
+        );
+        actions.apifoxDocId(docId);
+
+        log.info("Uptime Kuma 恢复通知完成: feishu={}, docId={}", feishuResult, docId);
 
         return actions.build();
     }

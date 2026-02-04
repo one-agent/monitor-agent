@@ -108,4 +108,190 @@ public class FeishuWebhookTool {
     public String sendFeishuAlert(String errorCode, String latency) {
         return sendFeishuAlert(null, LocalDateTime.now().format(TIME_FORMATTER), errorCode, latency);
     }
+
+    /**
+     * 发送带告警级别的飞书告警（用于 Uptime Kuma）
+     * 
+     * @param timestamp 时间戳
+     * @param errorCode 错误代码
+     * @param latency 响应延迟
+     * @param alertLevel 告警级别
+     * @param monitorName 监控项名称
+     * @param monitorUrl 监控项 URL
+     * @param monitorType 监控项类型
+     * @param errorMsg 错误消息
+     * @return 发送结果
+     */
+    public String sendFeishuAlertWithLevel(
+            String timestamp,
+            String errorCode,
+            String latency,
+            com.oneagent.monitor.model.dto.AlertLevel alertLevel,
+            String monitorName,
+            String monitorUrl,
+            String monitorType,
+            String errorMsg
+    ) {
+        log.info("Sending Feishu alert with level: monitorName={}, level={}, code={}",
+                monitorName, alertLevel, errorCode);
+
+        String webhookUrl = monitorProperties.getFeishu().getWebhookUrl();
+        if (webhookUrl == null || webhookUrl.contains("placeholder")) {
+            String msg = String.format(
+                    "Feishu webhook URL not configured. Alert: monitorName=%s, level=%s, code=%s, latency=%s",
+                    monitorName, alertLevel, errorCode, latency);
+            log.warn(msg);
+            return "Simulation: " + msg;
+        }
+
+        try {
+            ObjectNode card = objectMapper.createObjectNode();
+            card.put("msg_type", "interactive");
+
+            ObjectNode cardContent = card.putObject("card");
+            ObjectNode header = cardContent.putObject("header");
+            ObjectNode title = header.putObject("title");
+            title.put("tag", "plain_text");
+            
+            // 根据告警级别设置标题和颜色
+            String titleText = String.format("%s %s - %s", alertLevel.getEmoji(), alertLevel.getDescription(), monitorName);
+            title.put("content", titleText);
+            header.put("template", alertLevel.getColor());
+
+            // 构建告警内容
+            StringBuilder contentBuilder = new StringBuilder();
+            contentBuilder.append("**监控项名称**: ").append(monitorName).append("\n");
+            
+            if (monitorUrl != null && !monitorUrl.isEmpty()) {
+                contentBuilder.append("**监控地址**: ").append(monitorUrl).append("\n");
+            }
+            
+            if (monitorType != null && !monitorType.isEmpty()) {
+                contentBuilder.append("**监控类型**: ").append(monitorType).append("\n");
+            }
+            
+            contentBuilder.append("**发生时间**: ").append(timestamp).append("\n");
+            contentBuilder.append("**错误代码**: ").append(errorCode).append("\n");
+            contentBuilder.append("**响应延迟**: ").append(latency).append("\n");
+            
+            if (errorMsg != null && !errorMsg.isEmpty()) {
+                contentBuilder.append("**错误详情**: ").append(errorMsg).append("\n");
+            }
+
+            ObjectNode element = objectMapper.createObjectNode();
+            ObjectNode text = element.putObject("text");
+            text.put("tag", "lark_md");
+            text.put("content", contentBuilder.toString());
+            element.put("tag", "div");
+
+            cardContent.set("elements", objectMapper.createArrayNode().add(element));
+
+            RequestBody body = RequestBody.create(card.toString(), JSON);
+            Request request = new Request.Builder()
+                    .url(webhookUrl)
+                    .post(body)
+                    .build();
+
+            try (Response response = httpClient.newCall(request).execute()) {
+                String result;
+                if (response.isSuccessful()) {
+                    log.info("Feishu alert sent successfully with level {}", alertLevel);
+                    result = "Sent success";
+                } else {
+                    log.error("Failed to send Feishu alert: {}", response.code());
+                    result = "Failed: " + response.code();
+                }
+                return objectMapper.writeValueAsString(result);
+            }
+        } catch (IOException e) {
+            log.error("Error sending Feishu alert with level", e);
+            return "Error: " + e.getMessage();
+        }
+    }
+
+    /**
+     * 发送飞书恢复通知（用于 Uptime Kuma）
+     * 
+     * @param timestamp 恢复时间
+     * @param latency 响应延迟
+     * @param monitorName 监控项名称
+     * @param monitorUrl 监控项 URL
+     * @param monitorType 监控项类型
+     * @return 发送结果
+     */
+    public String sendFeishuRecovery(
+            String timestamp,
+            String latency,
+            String monitorName,
+            String monitorUrl,
+            String monitorType
+    ) {
+        log.info("Sending Feishu recovery: monitorName={}", monitorName);
+
+        String webhookUrl = monitorProperties.getFeishu().getWebhookUrl();
+        if (webhookUrl == null || webhookUrl.contains("placeholder")) {
+            String msg = String.format(
+                    "Feishu webhook URL not configured. Recovery: monitorName=%s, latency=%s",
+                    monitorName, latency);
+            log.warn(msg);
+            return "Simulation: " + msg;
+        }
+
+        try {
+            ObjectNode card = objectMapper.createObjectNode();
+            card.put("msg_type", "interactive");
+
+            ObjectNode cardContent = card.putObject("card");
+            ObjectNode header = cardContent.putObject("header");
+            ObjectNode title = header.putObject("title");
+            title.put("tag", "plain_text");
+            title.put("content", "🟢 服务恢复通知 - " + monitorName);
+            header.put("template", "green");
+
+            // 构建恢复通知内容
+            StringBuilder contentBuilder = new StringBuilder();
+            contentBuilder.append("**监控项名称**: ").append(monitorName).append("\n");
+            
+            if (monitorUrl != null && !monitorUrl.isEmpty()) {
+                contentBuilder.append("**监控地址**: ").append(monitorUrl).append("\n");
+            }
+            
+            if (monitorType != null && !monitorType.isEmpty()) {
+                contentBuilder.append("**监控类型**: ").append(monitorType).append("\n");
+            }
+            
+            contentBuilder.append("**恢复时间**: ").append(timestamp).append("\n");
+            contentBuilder.append("**响应延迟**: ").append(latency).append("\n");
+            contentBuilder.append("**状态**: 服务已恢复正常\n");
+
+            ObjectNode element = objectMapper.createObjectNode();
+            ObjectNode text = element.putObject("text");
+            text.put("tag", "lark_md");
+            text.put("content", contentBuilder.toString());
+            element.put("tag", "div");
+
+            cardContent.set("elements", objectMapper.createArrayNode().add(element));
+
+            RequestBody body = RequestBody.create(card.toString(), JSON);
+            Request request = new Request.Builder()
+                    .url(webhookUrl)
+                    .post(body)
+                    .build();
+
+            try (Response response = httpClient.newCall(request).execute()) {
+                String result;
+                if (response.isSuccessful()) {
+                    log.info("Feishu recovery sent successfully");
+                    result = "Sent success";
+                } else {
+                    log.error("Failed to send Feishu recovery: {}", response.code());
+                    result = "Failed: " + response.code();
+                }
+                return objectMapper.writeValueAsString(result);
+            }
+        } catch (IOException e) {
+            log.error("Error sending Feishu recovery", e);
+            return "Error: " + e.getMessage();
+        }
+    }
 }

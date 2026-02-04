@@ -306,7 +306,6 @@ public class AgentConfig {
 
                 【可用工具】
                 - retrieve_knowledge: 从知识库检索相关信息（RAG 模式自动提供）
-                - check_monitor_status: 检查当前系统监控状态
                 - get_monitor_logs: 获取最近的监控日志记录
                 - is_api_healthy: 检查 API 是否健康
                 - send_feishu_alert: 发送飞书告警（系统会自动调用，无需你主动发起）

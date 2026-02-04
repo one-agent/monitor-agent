@@ -23,6 +23,11 @@ public class MonitorProperties {
     private ApifoxConfig apifox = new ApifoxConfig();
 
     /**
+     * Uptime Kuma 配置
+     */
+    private UptimeKumaConfig uptimeKuma = new UptimeKumaConfig();
+
+    /**
      * Studio 配置
      */
     private StudioConfig studio = new StudioConfig();
@@ -73,5 +78,48 @@ public class MonitorProperties {
          * 运行名称（用于区分不同的 Agent）
          */
         private String runName = "demo_";
+    }
+
+    /**
+     * Uptime Kuma 配置
+     */
+    @Data
+    public static class UptimeKumaConfig {
+        /**
+         * 是否启用 Uptime Kuma 集成
+         */
+        private boolean enabled = false;
+
+        /**
+         * Uptime Kuma 基础 URL
+         */
+        private String baseUrl = "http://localhost:3001";
+
+        /**
+         * Uptime Kuma API Token（用于轮询）
+         */
+        private String apiToken;
+
+        /**
+         * 是否启用轮询模式
+         */
+        private boolean pollingEnabled = false;
+
+        /**
+         * 轮询间隔（秒）
+         */
+        private int pollingInterval = 60;
+
+        /**
+         * 告警去重时间窗口（秒）
+         * 同一监控项在此时间内只发送一次告警
+         */
+        private int alertDedupWindow = 300;
+
+        /**
+         * Webhook 验证密钥（可选）
+         * 如果配置，则验证 Uptime Kuma Webhook 请求头中的密钥
+         */
+        private String webhookSecret;
     }
 }

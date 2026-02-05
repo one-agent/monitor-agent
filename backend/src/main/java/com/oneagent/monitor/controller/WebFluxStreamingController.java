@@ -63,19 +63,30 @@ public class WebFluxStreamingController {
     @PostMapping(value = "/process", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> processRequest(@RequestBody InputCase inputCase) {
         log.info("处理流式请求: caseId={}", inputCase.getCaseId());
+        log.info("用户查询: {}", inputCase.getUserQuery());
         log.info("图片数量: {}", inputCase.getImages() != null ? inputCase.getImages().size() : 0);
 
-        // 使用SessionManager获取或创建Agent实例，并自动加载会话
-        ReActAgent customerServiceAgent = sessionManager.getOrCreateAgent(
-                inputCase.getCaseId(),
-                customerServiceAgentProvider.getObject()
-        );
+        // 打印图片信息（仅打印前 50 个字符）
+        if (inputCase.getImages() != null && !inputCase.getImages().isEmpty()) {
+            for (int i = 0; i < inputCase.getImages().size(); i++) {
+                String image = inputCase.getImages().get(i);
+                String preview = image.length() > 50 ? image.substring(0, 50) + "..." : image;
+                log.info("图片[{}]: {}", i, preview);
+            }
+        }
 
-        // 构建用户查询 - 包含监控状态信息供 Agent 参考
-        String userQuery = buildUserQueryWithMonitorContext(inputCase);
+        try {
+            // 使用SessionManager获取或创建Agent实例，并自动加载会话
+            ReActAgent customerServiceAgent = sessionManager.getOrCreateAgent(
+                    inputCase.getCaseId(),
+                    customerServiceAgentProvider.getObject()
+            );
 
-        // 构建消息 - 支持多模态
-        Msg message = buildMultimodalMessage(userQuery, inputCase.getImages());
+            // 构建用户查询 - 包含监控状态信息供 Agent 参考
+            String userQuery = buildUserQueryWithMonitorContext(inputCase);
+
+            // 构建消息 - 支持多模态
+            Msg message = buildMultimodalMessage(userQuery, inputCase.getImages());
 
         // Configure streaming options - INCREMENTAL mode for SSE
         StreamOptions streamOptions =
@@ -153,6 +164,16 @@ public class WebFluxStreamingController {
                             );
                         }
                     })            .filter(sseEvent -> sseEvent.data() != null && !sseEvent.data().isEmpty());
+        } catch (Exception e) {
+            log.error("处理请求时发生错误: {}", e.getMessage(), e);
+            String errorMsg = "Error: " + e.getMessage();
+            return Flux.just(
+                ServerSentEvent.<String>builder()
+                    .event("content")
+                    .data(toJson(errorMsg))
+                    .build()
+            );
+        }
     }
 
     /**
@@ -195,6 +216,7 @@ public class WebFluxStreamingController {
      * 构建支持多模态的消息
      */
     private Msg buildMultimodalMessage(String textContent, List<String> base64Images) {
+        log.info("开始构建多模态消息，文本长度: {}, 图片数量: {}", textContent.length(), base64Images != null ? base64Images.size() : 0);
         List<ContentBlock> contentBlocks = new ArrayList<>();
 
         // 添加文本内容
@@ -204,31 +226,43 @@ public class WebFluxStreamingController {
 
         // 添加图片内容
         if (base64Images != null && !base64Images.isEmpty()) {
-            for (String base64Image : base64Images) {
-                // 从 base64 数据中提取 MIME 类型
-                String mediaType = "image/png"; // 默认值
-                if (base64Image.startsWith("data:image/")) {
-                    int endTypeIndex = base64Image.indexOf(";");
-                    if (endTypeIndex > 11) { // "data:image/".length() = 11
-                        mediaType = base64Image.substring(5, endTypeIndex); // "data:image/".length() = 5
+            log.info("开始处理 {} 张图片", base64Images.size());
+            for (int i = 0; i < base64Images.size(); i++) {
+                String base64Image = base64Images.get(i);
+                try {
+                    log.info("处理图片 [{}], 长度: {}", i, base64Image.length());
+
+                    // 自动检测 MIME 类型
+                    String mediaType = "image/png";
+                    if (base64Image.startsWith("data:image/")) {
+                        int endTypeIndex = base64Image.indexOf(";");
+                        if (endTypeIndex > 11) { // "data:image/".length() = 11
+                            mediaType = base64Image.substring(5, endTypeIndex); // "data:image/".length() = 5
+                        }
                     }
+                    log.info("图片 [{}] MIME 类型: {}", i, mediaType);
+
+                    // 提取 base64 数据部分（去掉 "data:image/png;base64," 这样的前缀）
+                    String base64Data = base64Image;
+                    if (base64Image.contains(",")) {
+                        base64Data = base64Image.split(",", 2)[1];
+                    }
+                    log.info("图片 [{}] Base64 数据长度: {}", i, base64Data.length());
+
+                    ContentBlock imageBlock = ImageBlock.builder()
+                        .source(Base64Source.builder()
+                            .data(base64Data)
+                            .mediaType(mediaType)
+                            .build())
+                        .build();
+
+                    contentBlocks.add(imageBlock);
+                    log.info("图片 [{}] 处理成功", i);
+                } catch (Exception e) {
+                    log.error("处理图片 [{}] 时出错: {}", i, e.getMessage(), e);
                 }
-
-                // 提取 base64 数据部分（去掉 "data:image/png;base64," 这样的前缀）
-                String base64Data = base64Image;
-                if (base64Image.contains(",")) {
-                    base64Data = base64Image.split(",", 2)[1];
-                }
-
-                ContentBlock imageBlock = ImageBlock.builder()
-                    .source(Base64Source.builder()
-                        .data(base64Data)
-                        .mediaType(mediaType)
-                        .build())
-                    .build();
-
-                contentBlocks.add(imageBlock);
             }
+            log.info("所有图片处理完成，共 {} 个图片块", contentBlocks.size());
         }
 
         return Msg.builder()
@@ -303,6 +337,7 @@ public class WebFluxStreamingController {
                     .timestamp(webhookData.getHeartbeatTime())
                     .status(String.valueOf(webhookData.getHeartbeat() != null ? webhookData.getHeartbeat().getStatus() : -1))
                     .msg(webhookData.getErrorMessage())
+                    .monitorId(webhookData.getMonitorIdStr())
                     .build();
 
             List<MonitorLog> logs = new ArrayList<>();
@@ -324,14 +359,13 @@ public class WebFluxStreamingController {
                 default:
                     apiStatus = "500 Internal Server Error";
             }
-
             // 构建响应时间字符串
             String responseTime = webhookData.getResponseTime() > 0
                     ? webhookData.getResponseTime() + "ms"
                     : "Unknown";
 
             // 更新监控服务（保存到内存）
-            monitorService.updateStatus(apiStatus, responseTime, logs);
+            monitorService.updateStatus(logs);
 
             // 根据告警级别触发告警
             ActionTriggered actions = null;

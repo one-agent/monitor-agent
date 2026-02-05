@@ -25,39 +25,57 @@ public class UptimeKumaHeartbeat {
     /**
      * 状态码
      * 0 = DOWN (不可用)
-     * 1 = DEGRADED (降级)
-     * 2 = UP (正常)
+     * 1 = UP (正常)
+     * 2 = DEGRADED (降级)
      */
-    @JsonProperty("status")
     private Integer status;
     
     /**
-     * 心跳时间
+     * 心跳时间（ISO 8601 格式）
+     * 例如: "2026-02-05T12:00:00.000Z"
      */
-    @JsonProperty("time")
     private String time;
     
     /**
      * 消息内容
      */
-    @JsonProperty("msg")
     private String msg;
-    
-    /**
-     * 是否为重要心跳
-     */
-    @JsonProperty("important")
-    private Boolean important;
-    
-    /**
-     * 持续时间（毫秒）
-     */
-    @JsonProperty("duration")
-    private Integer duration;
     
     /**
      * 响应时间（毫秒）
      */
-    @JsonProperty("ping")
     private Integer ping;
+    
+    /**
+     * 是否为重要心跳
+     */
+    private Boolean important;
+
+    /**
+     * duration
+     *
+     */
+    private Integer duration;
+
+    /**
+     * 响应内容
+     */
+    private String response;
+
+    /**
+     * 时区
+     * 例如: "Asia/Shanghai"
+     */
+     private String timezone;
+    /**
+     * 时区偏移
+     * 例如: "+08:00"
+     */
+    private String timezoneOffset;
+
+    /**
+     * 本地日期时间
+     * 例如: "2026-02-05 20:00:00"
+     */
+    private String localDateTime;
 }

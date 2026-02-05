@@ -2,9 +2,7 @@ package com.oneagent.monitor.service;
 
 import com.oneagent.monitor.model.config.MonitorProperties;
 import com.oneagent.monitor.model.dto.MonitorLog;
-import com.oneagent.monitor.model.entity.MonitorStatus;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -26,8 +24,6 @@ public class MonitorService {
 
     private final MonitorProperties monitorProperties;
 
-    // Thread-safe in-memory storage for current status
-    private volatile MonitorStatus currentStatus;
     // Thread-safe in-memory storage for logs
     private final List<MonitorLog> monitorLogs = new ArrayList<>();
     // 告警去重：记录每个监控项的最后告警时间
@@ -103,30 +99,17 @@ public class MonitorService {
     /**
      * 更新当前监控状态
      */
-    public void updateStatus(String apiStatus, String responseTime, List<MonitorLog> logs) {
-        this.currentStatus = MonitorStatus.builder()
-                .status(apiStatus)
-                .responseTime("Unknown".equalsIgnoreCase(responseTime)?"100ms":responseTime)
-                .healthy("200 OK".equalsIgnoreCase(apiStatus))
-                .errorCount(logs != null ? logs.size() : 0)
-                .lastCheckTime(LocalDateTime.now().format(TIME_FORMATTER))
-                .build();
-
+    public void updateStatus(List<MonitorLog> logs) {
         // 如果提供了日志则更新
         synchronized (monitorLogs) {
             if (logs != null && !logs.isEmpty()) {
                 monitorLogs.addAll(logs);
-            }else{
-                if("200 OK".equalsIgnoreCase(apiStatus)){
-                    monitorLogs.clear();
-                }
             }
         }
 
         // 清理过期的告警记录
         cleanupExpiredAlerts();
 
-        log.debug("监控状态已更新: {}", this.currentStatus);
     }
 
     /**

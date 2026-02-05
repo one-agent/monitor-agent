@@ -18,21 +18,18 @@ public class UptimeKumaWebhookDTO {
     
     /**
      * 心跳数据
-     */
-    @JsonProperty("heartbeat")
+//     */
     private UptimeKumaHeartbeat heartbeat;
     
     /**
      * 监控项数据
      */
-    @JsonProperty("monitor")
     private UptimeKumaMonitor monitor;
     
     /**
      * 格式化的消息
      * 例如："[Testing] [🔴 Down] PING failed..."
      */
-    @JsonProperty("msg")
     private String msg;
     
     /**

@@ -11,6 +11,7 @@ export interface Message {
   isThinkingDone?: boolean; // 思考是否完成
   toolResults?: string[]; // 工具结果列表
   isToolResultsDone?: boolean; // 工具结果是否完成
+  images?: string[]; // 用户上传的图片列表（base64）
 }
 
 export interface MonitorLog {

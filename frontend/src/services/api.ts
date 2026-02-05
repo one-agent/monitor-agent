@@ -41,10 +41,6 @@ export const processRequestStream: StreamRequestHandler = async (
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
     const reader = response.body?.getReader();
     if (!reader) {
       throw new Error('Failed to get response body reader');

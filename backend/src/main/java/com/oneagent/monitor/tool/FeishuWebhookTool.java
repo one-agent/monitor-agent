@@ -111,7 +111,7 @@ public class FeishuWebhookTool {
 
     /**
      * 发送带告警级别的飞书告警（用于 Uptime Kuma）
-     * 
+     *
      * @param timestamp 时间戳
      * @param errorCode 错误代码
      * @param latency 响应延迟
@@ -152,7 +152,7 @@ public class FeishuWebhookTool {
             ObjectNode header = cardContent.putObject("header");
             ObjectNode title = header.putObject("title");
             title.put("tag", "plain_text");
-            
+
             // 根据告警级别设置标题和颜色
             String titleText = String.format("%s %s - %s", alertLevel.getEmoji(), alertLevel.getDescription(), monitorName);
             title.put("content", titleText);
@@ -161,19 +161,19 @@ public class FeishuWebhookTool {
             // 构建告警内容
             StringBuilder contentBuilder = new StringBuilder();
             contentBuilder.append("**监控项名称**: ").append(monitorName).append("\n");
-            
+
             if (monitorUrl != null && !monitorUrl.isEmpty()) {
                 contentBuilder.append("**监控地址**: ").append(monitorUrl).append("\n");
             }
-            
+
             if (monitorType != null && !monitorType.isEmpty()) {
                 contentBuilder.append("**监控类型**: ").append(monitorType).append("\n");
             }
-            
+
             contentBuilder.append("**发生时间**: ").append(timestamp).append("\n");
             contentBuilder.append("**错误代码**: ").append(errorCode).append("\n");
             contentBuilder.append("**响应延迟**: ").append(latency).append("\n");
-            
+
             if (errorMsg != null && !errorMsg.isEmpty()) {
                 contentBuilder.append("**错误详情**: ").append(errorMsg).append("\n");
             }
@@ -211,7 +211,7 @@ public class FeishuWebhookTool {
 
     /**
      * 发送飞书恢复通知（用于 Uptime Kuma）
-     * 
+     *
      * @param timestamp 恢复时间
      * @param latency 响应延迟
      * @param monitorName 监控项名称
@@ -251,15 +251,15 @@ public class FeishuWebhookTool {
             // 构建恢复通知内容
             StringBuilder contentBuilder = new StringBuilder();
             contentBuilder.append("**监控项名称**: ").append(monitorName).append("\n");
-            
+
             if (monitorUrl != null && !monitorUrl.isEmpty()) {
                 contentBuilder.append("**监控地址**: ").append(monitorUrl).append("\n");
             }
-            
+
             if (monitorType != null && !monitorType.isEmpty()) {
                 contentBuilder.append("**监控类型**: ").append(monitorType).append("\n");
             }
-            
+
             contentBuilder.append("**恢复时间**: ").append(timestamp).append("\n");
             contentBuilder.append("**响应延迟**: ").append(latency).append("\n");
             contentBuilder.append("**状态**: 服务已恢复正常\n");

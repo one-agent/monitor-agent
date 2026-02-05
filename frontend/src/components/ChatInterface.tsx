@@ -145,10 +145,8 @@ export default function ChatInterface({
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  const [customApiStatus, setCustomApiStatus] = useState(apiStatus);
-  const [customApiResponseTime, setCustomApiResponseTime] = useState(apiResponseTime);
-  const [showSettings, setShowSettings] = useState(false);
   const [images, setImages] = useState<string[]>([]);
+  const [fileList, setFileList] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<any>(null);
@@ -164,17 +162,22 @@ export default function ChatInterface({
     const content = inputValue.trim();
     if ((!content && images.length === 0) || loading) return;
 
+    // 保存当前要发送的图片数据
+    const currentImages = [...images];
+
     // Add user message
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: content + (images.length > 0 ? ` [已上传${images.length}张图片]` : ''),
-      timestamp: new Date().toISOString()
+      content: content,
+      timestamp: new Date().toISOString(),
+      images: currentImages.length > 0 ? currentImages : undefined
     };
 
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     setImages([]); // 清空图片
+    setFileList([]); // 清空文件列表
     setLoading(true);
 
     // 立即聚焦到输入框
@@ -196,11 +199,11 @@ export default function ChatInterface({
     try {
       // 构造监控日志，如果状态不是 200，添加异常日志
       let currentMonitorLogs = [...monitorLogs];
-      if (!customApiStatus.startsWith('200')) {
+      if (!apiStatus.startsWith('200')) {
         currentMonitorLogs.push({
           timestamp: new Date().toISOString(),
-          status: customApiStatus,
-          msg: `System alert: API responded with status ${customApiStatus} - Exception detected in request processing`
+          status: apiStatus,
+          msg: `System alert: API responded with status ${apiStatus} - Exception detected in request processing`
         });
       }
 
@@ -209,10 +212,10 @@ export default function ChatInterface({
         {
           case_id: caseId,
           user_query: content,
-          api_status: customApiStatus,
-          api_response_time: customApiResponseTime,
+          api_status: apiStatus,
+          api_response_time: apiResponseTime,
           monitor_log: currentMonitorLogs,
-          images: images // 添加图片数据
+          images: currentImages // 添加图片数据
         },
         // onChunk - update message content in real-time
         (chunk: string) => {
@@ -361,6 +364,93 @@ export default function ChatInterface({
     setMessages([]);
   };
 
+  /**
+   * 压缩图片到指定大小以内（1MB）
+   * @param file 原始文件
+   * @param maxSize 最大文件大小（字节），默认 1MB
+   * @returns 压缩后的 base64 字符串
+   */
+  const compressImage = (file: File, maxSize: number = 1 * 1024 * 1024): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+
+          if (!ctx) {
+            reject(new Error('无法获取 canvas context'));
+            return;
+          }
+
+          // 初始尺寸
+          let width = img.width;
+          let height = img.height;
+          let quality = 0.9;
+
+          // 计算初始缩放比例（如果图片太大）
+          const maxDimension = 2048;
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = (height * maxDimension) / width;
+              width = maxDimension;
+            } else {
+              width = (width * maxDimension) / height;
+              height = maxDimension;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          // 绘制图片
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // 压缩函数
+          const compress = (currentQuality: number): void => {
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  reject(new Error('压缩失败'));
+                  return;
+                }
+
+                // 如果大小符合要求，或者质量已经很低了，就返回
+                if (blob.size <= maxSize || currentQuality <= 0.1) {
+                  const reader = new FileReader();
+                  reader.readAsDataURL(blob);
+                  reader.onload = (e) => {
+                    const result = e.target?.result as string;
+                    if (blob.size > maxSize) {
+                      console.warn(`图片压缩后仍超过 ${maxSize / 1024 / 1024}MB，当前大小: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
+                    } else {
+                      console.log(`图片压缩成功: ${(file.size / 1024 / 1024).toFixed(2)}MB -> ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
+                    }
+                    resolve(result);
+                  };
+                  reader.onerror = (error) => reject(error);
+                } else {
+                  // 继续降低质量
+                  compress(currentQuality - 0.1);
+                }
+              },
+              'image/jpeg',
+              currentQuality
+            );
+          };
+
+          // 开始压缩
+          compress(quality);
+        };
+        img.onerror = (error) => reject(error);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const hasMessages = messages.length > 0;
 
   return (
@@ -411,10 +501,37 @@ export default function ChatInterface({
                       />
                     )}
                     {msg.role === 'assistant' && msg.toolResults && msg.toolResults.length > 0 && (
-                      <ToolResultsPanel 
-                        toolResults={msg.toolResults} 
-                        isToolResultsDone={msg.isToolResultsDone} 
+                      <ToolResultsPanel
+                        toolResults={msg.toolResults}
+                        isToolResultsDone={msg.isToolResultsDone}
                       />
+                    )}
+                    {/* 显示用户上传的图片 */}
+                    {msg.role === 'user' && msg.images && msg.images.length > 0 && (
+                      <div className="message-images">
+                        {msg.images.map((image, index) => (
+                          <img
+                            key={index}
+                            src={image}
+                            alt={`上传的图片 ${index + 1}`}
+                            className="message-image"
+                            onClick={() => {
+                              // 点击图片可以在新标签页中打开大图
+                              const newWindow = window.open('', '_blank');
+                              if (newWindow) {
+                                newWindow.document.write(`
+                                  <html>
+                                    <head><title>图片预览</title></head>
+                                    <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+                                      <img src="${image}" style="max-width:100%; max-height:100vh; object-fit:contain;">
+                                    </body>
+                                  </html>
+                                `);
+                              }
+                            }}
+                          />
+                        ))}
+                      </div>
                     )}
                     <div className="message-text">
                       <MarkdownText>
@@ -477,63 +594,6 @@ export default function ChatInterface({
       </div>
 
       <div className="input-container">
-        {/* 设置面板 */}
-        <div className="settings-panel">
-          <Button
-            type="text"
-            size="small"
-            onClick={() => setShowSettings(!showSettings)}
-            className="settings-toggle"
-          >
-            {showSettings ? '⬆️ 收起设置' : '⚙️ 测试设置'}
-          </Button>
-          
-          {showSettings && (
-            <div className="settings-content">
-              <div className="setting-item">
-                <label>API Status:</label>
-                <Input
-                  value={customApiStatus}
-                  onChange={(e) => setCustomApiStatus(e.target.value)}
-                  placeholder="例如: 500 Internal Server Error"
-                  size="small"
-                  className="setting-input"
-                />
-              </div>
-              <div className="setting-item">
-                <label>Response Time:</label>
-                <Input
-                  value={customApiResponseTime}
-                  onChange={(e) => setCustomApiResponseTime(e.target.value)}
-                  placeholder="例如: 5000ms"
-                  size="small"
-                  className="setting-input"
-                />
-              </div>
-              <div className="setting-presets">
-                <Button size="small" onClick={() => {
-                  setCustomApiStatus('200 OK');
-                  setCustomApiResponseTime('100ms');
-                }}>
-                  正常状态
-                </Button>
-                <Button size="small" onClick={() => {
-                  setCustomApiStatus('500 Internal Server Error');
-                  setCustomApiResponseTime('5000ms');
-                }}>
-                  服务器错误
-                </Button>
-                <Button size="small" onClick={() => {
-                  setCustomApiStatus('503 Service Unavailable');
-                  setCustomApiResponseTime('10000ms');
-                }}>
-                  服务不可用
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
         <div className="input-wrapper">
           <TextArea
             ref={inputRef}
@@ -549,15 +609,31 @@ export default function ChatInterface({
             <Upload
               multiple
               accept="image/*"
+              fileList={fileList}
+              onChange={(info) => {
+                setFileList(info.fileList);
+              }}
               showUploadList={true}
-              beforeUpload={(file) => {
-                // 将图片转换为 base64
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                  const base64String = e.target?.result as string;
-                  setImages(prev => [...prev, base64String]);
-                };
-                reader.readAsDataURL(file);
+              beforeUpload={async (file) => {
+                try {
+                  const maxSize = 1 * 1024 * 1024; // 1MB
+
+                  if (file.size > maxSize) {
+                    console.log(`图片大小 ${(file.size / 1024 / 1024).toFixed(2)}MB 超过 1MB，开始压缩...`);
+                    const compressedBase64 = await compressImage(file, maxSize);
+                    setImages(prev => [...prev, compressedBase64]);
+                  } else {
+                    // 图片小于 1MB，直接转换
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                      const base64String = e.target?.result as string;
+                      setImages(prev => [...prev, base64String]);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                } catch (error) {
+                  console.error('图片处理失败:', error);
+                }
                 return false; // 阻止默认上传行为
               }}
               maxCount={5} // 限制最多上传5张图片

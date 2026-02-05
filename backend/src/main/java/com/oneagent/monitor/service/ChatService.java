@@ -1,14 +1,10 @@
 package com.oneagent.monitor.service;
 
+import com.oneagent.monitor.model.dto.*;
 import com.oneagent.monitor.session.SessionManager;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
-import com.oneagent.monitor.model.dto.ActionTriggered;
-import com.oneagent.monitor.model.dto.AlertLevel;
-import com.oneagent.monitor.model.dto.InputCase;
-import com.oneagent.monitor.model.dto.MonitorLog;
-import com.oneagent.monitor.model.dto.ResultCase;
 import com.oneagent.monitor.tool.ApifoxApiTool;
 import com.oneagent.monitor.tool.FeishuWebhookTool;
 // import lombok.RequiredArgsConstructor; // Removed to manually define constructor
@@ -151,8 +147,7 @@ public class ChatService {
      * @return 触发的动作
      */
     public ActionTriggered handleUptimeKumaAlert(
-            InputCase inputCase,
-            com.oneagent.monitor.model.dto.UptimeKumaWebhookDTO webhookData) {
+            InputCase inputCase, UptimeKumaWebhookDTO webhookData) {
 
         AlertLevel alertLevel = webhookData.getAlertLevel();
         log.warn("Uptime Kuma 告警触发: monitorId={}, monitorName={}, level={}, status={}",

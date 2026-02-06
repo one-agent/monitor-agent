@@ -43,7 +43,7 @@ public class MonitorCheckTool {
      */
     @Tool(name = "is_api_healthy", description = "检查 API 是否健康。基于最近的监控日志判断系统状态，如果没有错误日志则返回 true，否则返回 false。")
     public String isApiHealthy() {
-        List<MonitorLog> logs = monitorService.getRecentLogs();
+        List<MonitorLog> logs = monitorService.checkRecentLogs();
         boolean isHealthy = logs == null || logs.isEmpty();
         try {
             return objectMapper.writeValueAsString(isHealthy);

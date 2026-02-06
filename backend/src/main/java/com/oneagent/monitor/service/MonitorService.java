@@ -122,6 +122,54 @@ public class MonitorService {
     }
 
     /**
+     * 检查是否存在未处理的错误日志
+     * 去重monitorId取最近时间非1的数据
+     */
+    public List<MonitorLog> checkRecentLogs() {
+        synchronized (monitorLogs) {
+            // 用于存储每个monitorId对应的最新日志
+            ConcurrentMap<String, MonitorLog> latestLogs = new ConcurrentHashMap<>();
+
+            // 先按monitorId分组，找到每个monitorId对应的最新记录
+            for (MonitorLog log : monitorLogs) {
+                String monitorId = log.getMonitorId();
+                MonitorLog existing = latestLogs.get(monitorId);
+
+                // 如果monitorId不存在，则添加
+                if (existing == null) {
+                    latestLogs.put(monitorId, log);
+                } else if (!isNewer(log, existing)) {
+                    // 如果当前日志时间更新，则替换
+                    latestLogs.put(monitorId, log);
+                }
+            }
+
+            // 过滤掉status为1的数据
+            return latestLogs.values().stream()
+                .filter(log -> !"1".equals(log.getStatus()))
+                .collect(java.util.stream.Collectors.toList());
+        }
+    }
+    
+    /**
+     * 比较两个MonitorLog的时间戳，判断log1是否比log2更新
+     */
+    private boolean isNewer(MonitorLog log1, MonitorLog log2) {
+        if (log1.getTimestamp() == null || log2.getTimestamp() == null) {
+            return false;
+        }
+        
+        try {
+            LocalDateTime time1 = LocalDateTime.parse(log1.getTimestamp(), TIME_FORMATTER);
+            LocalDateTime time2 = LocalDateTime.parse(log2.getTimestamp(), TIME_FORMATTER);
+            return time1.isAfter(time2);
+        } catch (Exception e) {
+            log.warn("解析时间戳失败: {} 或 {}", log1.getTimestamp(), log2.getTimestamp());
+            return false;
+        }
+    }
+
+    /**
      * 添加一条监控日志记录
      */
     public void addLog(MonitorLog monitorLog) {

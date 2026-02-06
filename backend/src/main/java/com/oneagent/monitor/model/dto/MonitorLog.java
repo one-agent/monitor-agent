@@ -38,4 +38,10 @@ public class MonitorLog {
      */
     @JsonProperty("monitorId")
     private String monitorId;
+
+    /**
+     * 监控项名称
+     */
+    @JsonProperty("monitorName")
+    private String monitorName;
 }

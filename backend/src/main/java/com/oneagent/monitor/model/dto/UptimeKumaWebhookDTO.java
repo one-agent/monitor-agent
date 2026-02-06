@@ -112,7 +112,7 @@ public class UptimeKumaWebhookDTO {
      * @return 心跳时间，如果不存在则返回 ""
      */
     public String getHeartbeatTime() {
-        return heartbeat != null ? heartbeat.getTime() : "";
+        return heartbeat != null ? heartbeat.getLocalDateTime() : "";
     }
     
     /**

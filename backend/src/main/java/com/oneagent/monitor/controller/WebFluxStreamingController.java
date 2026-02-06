@@ -305,10 +305,7 @@ public class WebFluxStreamingController {
     public Mono<Map<String, String>> handleUptimeKumaWebhook(
             @RequestBody UptimeKumaWebhookDTO webhookData,
             @RequestHeader(value = "X-Uptime-Kuma-Secret", required = false) String webhookSecret) {
-        log.info("收到 Uptime Kuma Webhook: monitorId={}, status={}, monitorName={}",
-                webhookData.getMonitorIdStr(),
-                webhookData.getHeartbeat() != null ? webhookData.getHeartbeat().getStatus() : "unknown",
-                webhookData.getMonitorName());
+        log.info("收到 Uptime Kuma Webhook: {}", webhookData);
 
         // 检查 Uptime Kuma 集成是否启用
         if (!monitorProperties.getUptimeKuma().isEnabled()) {
@@ -338,6 +335,7 @@ public class WebFluxStreamingController {
                     .status(String.valueOf(webhookData.getHeartbeat() != null ? webhookData.getHeartbeat().getStatus() : -1))
                     .msg(webhookData.getErrorMessage())
                     .monitorId(webhookData.getMonitorIdStr())
+                    .monitorName(webhookData.getMonitorName())
                     .build();
 
             List<MonitorLog> logs = new ArrayList<>();
@@ -347,7 +345,7 @@ public class WebFluxStreamingController {
             String apiStatus;
             AlertLevel alertLevel = webhookData.getAlertLevel();
             switch (alertLevel) {
-                case CRITICAL:
+                case DOWN:
                     apiStatus = "503 Service Unavailable";
                     break;
                 case WARNING:

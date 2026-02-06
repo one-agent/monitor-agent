@@ -13,7 +13,7 @@ public enum AlertLevel {
     /**
      * 严重告警 - 服务完全不可用 (status = 0)
      */
-    CRITICAL(0, "严重告警", "red", "🔴"),
+    DOWN(0, "严重告警", "red", "🔴"),
 
     /**
      * 警告告警 - 服务降级或部分可用 (status = 1)
@@ -38,9 +38,9 @@ public enum AlertLevel {
      */
     public static AlertLevel fromStatus(int status) {
         return switch (status) {
-            case 0 -> CRITICAL;
-            case 1 -> WARNING;
-            case 2 -> INFO;
+            case 0 -> DOWN;
+            case 1 -> INFO;
+            case 2 -> WARNING;
             default -> WARNING;
         };
     }

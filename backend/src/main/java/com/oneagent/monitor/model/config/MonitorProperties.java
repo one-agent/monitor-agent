@@ -33,6 +33,11 @@ public class MonitorProperties {
     private StudioConfig studio = new StudioConfig();
 
     /**
+     * CORS 配置
+     */
+    private CorsConfig cors = new CorsConfig();
+
+    /**
      * 飞书配置
      */
     @Data
@@ -121,5 +126,18 @@ public class MonitorProperties {
          * 如果配置，则验证 Uptime Kuma Webhook 请求头中的密钥
          */
         private String webhookSecret;
+    }
+
+    /**
+     * CORS 配置
+     */
+    @Data
+    public static class CorsConfig {
+        /**
+         * 允许的来源列表，逗号分隔
+         * 例如: http://localhost:5173,http://example.com
+         * 空值或 * 表示允许所有来源
+         */
+        private String allowedOrigins = "*";
     }
 }

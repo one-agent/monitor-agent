@@ -36,6 +36,9 @@ services:
       - UPTIME_KUMA_API_TOKEN=${UPTIME_KUMA_API_TOKEN}
       - UPTIME_KUMA_WEBHOOK_SECRET=${UPTIME_KUMA_WEBHOOK_SECRET:-2233}
 
+      # CORS 配置（允许的来源，逗号分隔，* 表示允许所有）
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
+
       # 应用配置
       - SERVER_PORT=8081
       - SPRING_PROFILES_ACTIVE=prod

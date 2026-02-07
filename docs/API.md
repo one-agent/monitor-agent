@@ -174,7 +174,7 @@ data: {
 curl -N -X POST http://localhost:8081/api/process \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "胜算云平台有哪些计费模式？",
+    "query": "嗨云平台有哪些计费模式？",
     "caseId": "test-session-001"
   }'
 ```
@@ -186,7 +186,7 @@ data: {"type":"thought","content":"用户询问计费模式，需要检索知识
 
 data: {"type":"tool","toolName":"retrieval","result":[...]}
 
-data: {"type":"message","content":"胜算云平台提供以下计费模式："}
+data: {"type":"message","content":"嗨云平台提供以下计费模式："}
 
 data: {"type":"message","content":"1. 按量付费模式"}
 
@@ -526,7 +526,7 @@ def stream_query(query: str, case_id: str):
         print(event.data)
 
 # 使用示例
-stream_query("胜算云平台有哪些计费模式？", "test-001")
+stream_query("嗨云平台有哪些计费模式？", "test-001")
 ```
 
 ### JavaScript/TypeScript 示例
@@ -626,7 +626,7 @@ public class MonitorClient {
         MonitorClient client = new MonitorClient("http://localhost:8081");
 
         // 流式请求
-        client.streamQuery("胜算云平台有哪些计费模式？", "test-001")
+        client.streamQuery("嗨云平台有哪些计费模式？", "test-001")
                 .subscribe(System.out::println);
 
         // 健康检查

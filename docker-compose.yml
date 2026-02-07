@@ -31,6 +31,11 @@ services:
       - APIFOX_FOLDER_ID=${APIFOX_FOLDER_ID}
       - APIFOX_MODULE_ID=${APIFOX_MODULE_ID}
 
+      # Uptime Kuma 配置（可选，用于监控告警）
+      - UPTIME_KUMA_BASE_URL=${UPTIME_KUMA_BASE_URL:-http://localhost:3001}
+      - UPTIME_KUMA_API_TOKEN=${UPTIME_KUMA_API_TOKEN}
+      - UPTIME_KUMA_WEBHOOK_SECRET=${UPTIME_KUMA_WEBHOOK_SECRET:-2233}
+
       # 应用配置
       - SERVER_PORT=8081
       - SPRING_PROFILES_ACTIVE=prod
@@ -51,7 +56,8 @@ services:
 
   # 前端服务
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
     container_name: monitor-frontend
     ports:
       - "5173:80"

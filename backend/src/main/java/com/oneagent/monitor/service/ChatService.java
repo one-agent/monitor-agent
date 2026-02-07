@@ -100,46 +100,6 @@ public class ChatService {
     }
 
     /**
-     * 通过发送通知处理 API 告警
-     */
-    public ActionTriggered handleApiAlert(InputCase inputCase) {
-        log.warn("API 告警触发，用例 {}: status={}, time={}",
-                inputCase.getCaseId(), inputCase.getApiStatus() ,inputCase.getApiResponseTime());
-
-        ActionTriggered.ActionTriggeredBuilder actions = ActionTriggered.builder();
-
-        // 从监控日志获取最新的错误信息
-        String errorMsg = "N/A";
-        String errorTime = inputCase.getApiResponseTime();
-        if (inputCase.getMonitorLog() != null && !inputCase.getMonitorLog().isEmpty()) {
-            MonitorLog latest = inputCase.getMonitorLog().get(0);
-            errorMsg = latest.getMsg();
-            errorTime = latest.getTimestamp();
-        }
-
-        // 发送飞书告警
-        String feishuResult = feishuWebhookTool.sendFeishuAlert(
-                errorTime,
-                inputCase.getApiStatus(),
-                inputCase.getApiResponseTime()
-        );
-        actions.feishuWebhook(feishuResult);
-
-        // 创建 Apifox 文档
-        String docId = apifoxApiTool.createApifoxDocument(
-                errorTime,
-                inputCase.getApiStatus(),
-                errorMsg,
-                inputCase.getApiResponseTime()
-        );
-        actions.apifoxDocId(docId);
-
-        log.info("告警动作完成: feishu={}, docId={}", feishuResult, docId);
-
-        return actions.build();
-    }
-
-    /**
      * 处理 Uptime Kuma 告警
      * 
      * @param inputCase 输入用例

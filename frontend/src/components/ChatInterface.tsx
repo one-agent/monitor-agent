@@ -149,7 +149,7 @@ export default function ChatInterface({
   const [fileList, setFileList] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<any>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -330,7 +330,10 @@ export default function ChatInterface({
       setLoading(false);
       // Focus back on input
       setTimeout(() => {
-        messagesContainerRef.current?.querySelector('textarea')?.focus();
+        const textarea = messagesContainerRef.current?.querySelector('textarea');
+        if (textarea && 'focus' in textarea) {
+          (textarea as HTMLTextAreaElement).focus();
+        }
       }, 100);
     }
   };

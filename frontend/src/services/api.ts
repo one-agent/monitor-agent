@@ -8,8 +8,7 @@ import type {
   StreamRequestHandler
 } from '../types';
 
-// @ts-ignore
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api';
+const API_BASE_URL = '/api';
 
 /**
  * Process a request with AgentScope streaming support
@@ -236,7 +235,7 @@ function extractMimeTypeAndData(dataUrl: string): [string, string] {
 /**
  * 从 MIME 类型获取文件扩展名
  */
-function getFileType(mimeType: string): string {
+export function getFileType(mimeType: string): string {
   const mimeToExt: Record<string, string> = {
     'image/jpeg': 'jpg',
     'image/jpg': 'jpg',
@@ -251,7 +250,7 @@ function getFileType(mimeType: string): string {
 /**
  * 将 data URL 转换为 Blob 对象
  */
-function dataURLtoBlob(dataUrl: string): Blob {
+export function dataURLtoBlob(dataUrl: string): Blob {
   const [mimeType, base64Data] = extractMimeTypeAndData(dataUrl);
   const byteCharacters = atob(base64Data);
   const byteArrays = [];

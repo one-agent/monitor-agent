@@ -32,7 +32,7 @@
 - **AI 框架**: AgentScope 1.0.5
 - **响应式**: Spring WebFlux + Reactor
 - **LLM 集成**: OpenAI Java SDK
-- **HTTP 客户端**: OkHttp4
+- **HTTP 客户端**: OkHttp3
 
 ### 前端
 - **框架**: React 18.3.1

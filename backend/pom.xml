@@ -55,7 +55,7 @@
             <artifactId>openai-java</artifactId>
         </dependency>
 
-        <!-- OkHttp4 for HTTP Client -->
+        <!-- OkHttp3 for HTTP Client -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>

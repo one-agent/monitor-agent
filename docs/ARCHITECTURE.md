@@ -465,13 +465,13 @@ flowchart TB
 
 ### 后端技术栈
 
-| 技术 | 版本 | 选型理由 |
-|------|------|----------|
-| Spring Boot | 4.0.1 | 企业级 Java 应用框架，生态丰富 |
-| Spring WebFlux | 4.0.1 | 响应式编程，非阻塞 I/O，高并发性能 |
-| AgentScope | 1.0.5 | 官方 Agent 框架，支持 ReAct 和 RAG |
-| Java | 17 | LTS 版本，性能稳定，特性丰富 |
-| OkHttp4 | 4.x | 高效的 HTTP 客户端，支持异步 |
+| 技术 | 版本     | 选型理由 |
+|------|--------|----------|
+| Spring Boot | 4.0.1  | 企业级 Java 应用框架，生态丰富 |
+| Spring WebFlux | 4.0.1  | 响应式编程，非阻塞 I/O，高并发性能 |
+| AgentScope | 1.0.5  | 官方 Agent 框架，支持 ReAct 和 RAG |
+| Java | 17     | LTS 版本，性能稳定，特性丰富 |
+| OkHttp3 | 3.x    | 高效的 HTTP 客户端，支持异步 |
 | Lombok | 1.18.x | 简化 Java 代码，减少样板代码 |
 
 ### 前端技术栈

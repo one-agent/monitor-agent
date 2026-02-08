@@ -12,7 +12,8 @@ import {
   UserOutlined,
   CopyOutlined,
   CheckOutlined,
-  UploadOutlined
+  UploadOutlined,
+  FileAddOutlined
 } from '@ant-design/icons';
 import { processRequestStream, resetSession } from '../services/api';
 import type { Message, MonitorLog } from '../types';
@@ -464,12 +465,12 @@ export default function ChatInterface({
         </h2>
         <Button
           type="text"
-          icon={<DeleteOutlined />}
+          icon={<FileAddOutlined />}
           onClick={handleClearHistory}
           disabled={!hasMessages}
           className="clear-btn"
         >
-          Clear History
+          New Session
         </Button>
       </div>
 

@@ -549,11 +549,33 @@
     padding: 0.5rem 0.75rem;
   }
 
-  .send-btn span {
-    display: none;
+  /* 隐藏按钮上的文本，只保留图标 */
+  .send-btn > span:not(.ant-btn-icon):not(.anticon) {
+    display: none !important;
   }
 
   .send-btn {
-    padding: 4px 12px;
+    min-width: 32px !important;
+    width: 36px;
+    height: 36px;
+    padding: 4px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .upload-btn > span:not(.ant-btn-icon):not(.anticon) {
+    display: none !important;
+  }
+
+  .upload-btn,
+  .upload-btn.ant-btn-text {
+    min-width: 32px !important;
+    width: 36px;
+    height: 36px;
+    padding: 4px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 }

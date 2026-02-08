@@ -643,8 +643,11 @@ export default function ChatInterface({
               maxCount={5} // 限制最多上传5张图片
             >
               <Button
+                type="text"
                 icon={<UploadOutlined />}
                 disabled={loading}
+                className="upload-btn"
+                title="Upload Image"
               >
                 Upload Image
               </Button>
@@ -656,6 +659,7 @@ export default function ChatInterface({
               disabled={(!inputValue.trim() && images.length === 0) || loading}
               loading={loading}
               className="send-btn"
+              title="Send"
             >
               Send
             </Button>

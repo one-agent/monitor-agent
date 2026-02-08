@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Input, Button, Empty, Card, Spin, Upload } from 'antd';
+import { Input, Button, Empty, Card, Spin, Upload, Modal } from 'antd';
 import {
   SendOutlined,
   RobotOutlined,
@@ -12,7 +12,8 @@ import {
   CopyOutlined,
   CheckOutlined,
   UploadOutlined,
-  FileAddOutlined
+  FileAddOutlined,
+  CloseOutlined
 } from '@ant-design/icons';
 import { processRequestStream, resetSession } from '../services/api';
 import type { Message, MonitorLog } from '../types';
@@ -147,6 +148,7 @@ export default function ChatInterface({
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [images, setImages] = useState<string[]>([]);
   const [fileList, setFileList] = useState<any[]>([]);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -518,20 +520,7 @@ export default function ChatInterface({
                             src={image}
                             alt={`上传的图片 ${index + 1}`}
                             className="message-image"
-                            onClick={() => {
-                              // 点击图片可以在新标签页中打开大图
-                              const newWindow = window.open('', '_blank');
-                              if (newWindow) {
-                                newWindow.document.write(`
-                                  <html>
-                                    <head><title>图片预览</title></head>
-                                    <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
-                                      <img src="${image}" style="max-width:100%; max-height:100vh; object-fit:contain;">
-                                    </body>
-                                  </html>
-                                `);
-                              }
-                            }}
+                            onClick={() => setPreviewImage(image)}
                           />
                         ))}
                       </div>
@@ -668,6 +657,29 @@ export default function ChatInterface({
           Press Enter to send, Shift+Enter for new line
         </div>
       </div>
+
+      {/* 图片预览 Modal */}
+      <Modal
+        open={previewImage !== null}
+        onCancel={() => setPreviewImage(null)}
+        footer={null}
+        width="90vw"
+        style={{ top: 20 }}
+        bodyStyle={{ padding: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'transparent', minHeight: '70vh' }}
+        closeIcon={<CloseOutlined style={{ color: '#fff', fontSize: 24 }} />}
+      >
+        {previewImage && (
+          <img
+            src={previewImage}
+            alt="预览图片"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '85vh',
+              objectFit: 'contain'
+            }}
+          />
+        )}
+      </Modal>
     </div>
   );
 }

@@ -1,10 +1,20 @@
 version: '3.8'
 
+# 使用说明:
+# 1. 构建镜像: docker-compose build
+# 2. 启动服务: docker-compose up -d
+# 3. 构建并推送镜像: ./build-and-push.sh (Linux/Mac) 或 build-and-push.bat (Windows)
+#    注意: 推送前需要先登录阿里云: docker login --username=<your-username> registry.cn-hangzhou.aliyuncs.com
+
 services:
   # 后端服务
   backend:
-    build: ./backend
-    container_name: monitor-backend
+    build:
+      context: ./backend
+      tags:
+        - registry.cn-hangzhou.aliyuncs.com/harryzhang/monitor-agent-backend:latest
+    image: registry.cn-hangzhou.aliyuncs.com/harryzhang/monitor-agent-backend:latest
+    container_name: monitor-agent-backend
     ports:
       - "8081:8081"
     environment:
@@ -61,7 +71,10 @@ services:
   frontend:
     build:
       context: ./frontend
-    container_name: monitor-frontend
+      tags:
+        - registry.cn-hangzhou.aliyuncs.com/harryzhang/monitor-agent-frontend:latest
+    image: registry.cn-hangzhou.aliyuncs.com/harryzhang/monitor-agent-frontend:latest
+    container_name: monitor-agent-frontend
     ports:
       - "5173:80"
     depends_on:

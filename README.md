@@ -187,6 +187,75 @@ docker-compose logs -f
 # 后端健康检查: http://localhost:8081/api/health
 ```
 
+### 镜像构建和推送至阿里云容器镜像服务
+
+项目已配置为可将镜像构建并推送至阿里云容器镜像服务，镜像名格式为 `registry.cn-hangzhou.aliyuncs.com/harryzhang/monitor-agent-{frontend|backend}:latest`。
+
+**准备工作**：
+
+1. 登录阿里云容器镜像服务：
+   ```bash
+   docker login --username=<your-username> registry.cn-hangzhou.aliyuncs.com
+   ```
+
+2. 确保 docker-compose.yml 文件已包含正确的镜像标签配置（默认已配置）。
+
+**一键构建和推送**：
+
+项目提供了便捷的脚本用于构建和推送镜像：
+
+- **Linux/Mac**:
+  ```bash
+  ./build-and-push.sh
+  ```
+
+- **Windows**:
+  ```bash
+  build-and-push.bat
+  ```
+
+- **使用 Make** (如果系统已安装 Make):
+  ```bash
+  make build-and-push
+  ```
+
+**分步操作**：
+
+如果需要单独执行构建或推送操作：
+
+```bash
+# 仅构建镜像
+docker-compose build
+
+# 仅推送镜像
+make push
+# 或者手动推送
+docker push registry.cn-hangzhou.aliyuncs.com/harryzhang/monitor-agent-frontend:latest
+docker push registry.cn-hangzhou.aliyuncs.com/harryzhang/monitor-agent-backend:latest
+```
+
+**自定义镜像名称**：
+
+如需使用不同的镜像仓库或命名空间，可以修改 `docker-compose.yml` 文件中的 `image` 和 `build.tags` 配置：
+
+```yaml
+frontend:
+  build:
+    context: ./frontend
+    tags:
+      - your-registry/your-namespace/monitor-agent-frontend:latest  # 修改为您的镜像名
+  image: your-registry/your-namespace/monitor-agent-frontend:latest  # 修改为您的镜像名
+  # ...
+
+backend:
+  build:
+    context: ./backend
+    tags:
+      - your-registry/your-namespace/monitor-agent-backend:latest  # 修改为您的镜像名
+  image: your-registry/your-namespace/monitor-agent-backend:latest  # 修改为您的镜像名
+  # ...
+```
+
 **Docker Compose 常用命令**：
 
 ```bash
@@ -228,6 +297,15 @@ docker-compose top
 | `APIFOX_PROJECT_ID` | Apifox 项目 ID             | - | 是    |
 | `APIFOX_FOLDER_ID` | Apifox 文件夹 ID            | - | 否    |
 | `APIFOX_MODULE_ID` | Apifox 模块 ID             | - | 否    |
+
+### Docker 镜像配置
+
+对于部署到云环境，项目已预配置阿里云容器镜像服务的推送功能：
+
+- **前端镜像**: `registry.cn-hangzhou.aliyuncs.com/harryzhang/monitor-agent-frontend:latest`
+- **后端镜像**: `registry.cn-hangzhou.aliyuncs.com/harryzhang/monitor-agent-backend:latest`
+
+如需自定义镜像仓库，请修改 `docker-compose.yml` 文件中的 `image` 和 `build.tags` 配置。
 
 ### 应用配置
 
@@ -289,8 +367,11 @@ monitor-agent/
 │       ├── services/         # API 服务
 │       ├── types/            # TypeScript 类型
 │       └── *.css             # 样式文件
-├── docker-compose.yml          # Docker Compose 配置
+├── docker-compose.yml          # Docker Compose 配置（包含阿里云镜像推送配置）
 ├── .env.example              # 环境变量示例
+├── build-and-push.sh         # Linux/Mac 构建和推送脚本
+├── build-and-push.bat        # Windows 构建和推送脚本
+├── Makefile                  # Make 构建文件
 ├── docs/                     # 文档目录
 │   ├── ARCHITECTURE.md       # 架构文档
 │   └── API.md               # API 文档

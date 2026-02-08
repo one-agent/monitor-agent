@@ -7,7 +7,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Input, Button, Empty, Card, Spin, Upload } from 'antd';
 import {
   SendOutlined,
-  DeleteOutlined,
   RobotOutlined,
   UserOutlined,
   CopyOutlined,

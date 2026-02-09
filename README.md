@@ -98,12 +98,75 @@ docker-compose up -d --build
 
 ### 本地部署
 
+#### Windows 系统
+
+**后端启动**：
+
+```powershell
+# 1. 进入后端目录
+cd backend
+
+# 2. 配置环境变量（PowerShell）
+$env:LLM_API_KEY="your-openai-api-key"
+$env:LLM_BASE_URL="https://api.openai.com/v1"
+$env:LLM_MODEL_NAME="gpt-3.5-turbo"
+$env:EMBEDDING_API_KEY="your-openai-api-key"
+$env:EMBEDDING_BASE_URL="https://api.openai.com/v1"
+$env:EMBEDDING_MODEL_NAME="text-embedding-3-small"
+$env:FEISHU_WEBHOOK_URL="your-feishu-webhook-url"
+$env:APIFOX_API_URL="https://api.apifox.com"
+$env:APIFOX_API_TOKEN="your-apifox-token"
+$env:APIFOX_PROJECT_ID="your-project-id-here"
+
+# 3. 运行应用
+mvn spring-boot:run
+```
+
+或者在 CMD 中设置环境变量：
+
+```cmd
+cd backend
+
+set LLM_API_KEY=your-openai-api-key
+set LLM_BASE_URL=https://api.openai.com/v1
+set LLM_MODEL_NAME=gpt-3.5-turbo
+set EMBEDDING_API_KEY=your-openai-api-key
+set EMBEDDING_BASE_URL=https://api.openai.com/v1
+set EMBEDDING_MODEL_NAME=text-embedding-3-small
+set FEISHU_WEBHOOK_URL=your-feishu-webhook-url
+set APIFOX_API_URL=https://api.apifox.com
+set APIFOX_API_TOKEN=your-apifox-token
+set APIFOX_PROJECT_ID=your-project-id-here
+
+mvn spring-boot:run
+```
+
+服务将在 `http://localhost:8081` 启动。
+
+**前端启动**：
+
+```powershell
+# 1. 进入前端目录
+cd frontend
+
+# 2. 安装依赖
+npm install
+
+# 3. 启动开发服务器
+npm run dev
+```
+
+前端将在 `http://localhost:5173` 启动。
+
+#### Linux / macOS 系统
+
 **后端启动**：
 
 ```bash
+# 1. 进入后端目录
 cd backend
 
-# 配置环境变量
+# 2. 配置环境变量
 export LLM_API_KEY="your-openai-api-key"
 export LLM_BASE_URL="https://api.openai.com/v1"
 export LLM_MODEL_NAME="gpt-3.5-turbo"
@@ -115,7 +178,7 @@ export APIFOX_API_URL="https://api.apifox.com"
 export APIFOX_API_TOKEN="your-apifox-token"
 export APIFOX_PROJECT_ID="your-project-id-here"
 
-# 运行应用
+# 3. 运行应用
 mvn spring-boot:run
 ```
 
@@ -124,16 +187,31 @@ mvn spring-boot:run
 **前端启动**：
 
 ```bash
+# 1. 进入前端目录
 cd frontend
 
-# 安装依赖
+# 2. 安装依赖
 npm install
 
-# 启动开发服务器
+# 3. 启动开发服务器
 npm run dev
 ```
 
 前端将在 `http://localhost:5173` 启动。
+
+**可选：使用 .env 文件配置环境变量**
+
+为避免每次启动都手动设置环境变量，可以在项目根目录创建 `.env` 文件：
+
+```bash
+# 复制示例配置文件
+cp .env.example .env
+
+# 编辑 .env 文件，填入您的实际配置
+vim .env
+```
+
+然后使用 `dotenv` 工具或 IDE 的环境变量加载功能自动加载配置。
 
 ### Docker 部署
 

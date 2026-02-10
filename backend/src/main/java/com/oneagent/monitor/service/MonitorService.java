@@ -138,7 +138,7 @@ public class MonitorService {
                 // 如果monitorId不存在，则添加
                 if (existing == null) {
                     latestLogs.put(monitorId, log);
-                } else if (!isNewer(log, existing)) {
+                } else if (isNewer(log, existing)) {
                     // 如果当前日志时间更新，则替换
                     latestLogs.put(monitorId, log);
                 }

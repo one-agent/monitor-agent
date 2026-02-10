@@ -71,7 +71,7 @@
 ### API 调用示例
 
 ```bash
-curl -X POST https://api.shengsuan.com/v1/chat/completions \
+curl -X POST https://api.hi.com/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -84,18 +84,18 @@ curl -X POST https://api.shengsuan.com/v1/chat/completions \
 
 ### SDK 支持
 
-- Python SDK: `pip install shengsuan-python`
-- Java SDK: Maven 依赖 `com.shengsuan:shengsuan-java`
-- Node.js SDK: `npm install shengsuan-js`
+- Python SDK: `pip install hi-python`
+- Java SDK: Maven 依赖 `com.hi:hi-java`
+- Node.js SDK: `npm install hi-js`
 
 ---
 
 ## 技术支持
 
 ### 联系方式
-- 技术文档：https://docs.shengsuan.com
-- 开发者社区：https://community.shengsuan.com
-- 客服邮箱：support@shengsuan.com
+- 技术文档：https://docs.hi.com
+- 开发者社区：https://community.hi.com
+- 客服邮箱：support@hi.com
 - 企业微信：扫码加入开发者交流群
 
 ### 服务等级协议 (SLA)

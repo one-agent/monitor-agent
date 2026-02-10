@@ -573,7 +573,7 @@ export default function ChatInterface({
                   <h3>Welcome to Monitor Agent</h3>
                   <p>I'm your intelligent customer service monitoring assistant.</p>
                   <ul className="welcome-features">
-                    <li>Answering questions about Shengsuan Cloud platform</li>
+                    <li>Answering questions about Hi Cloud platform</li>
                     <li>Checking system monitoring status</li>
                     <li>Responding to stability inquiries with real data</li>
                   </ul>

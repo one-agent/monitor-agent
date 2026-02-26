@@ -1,9 +1,9 @@
 # 智能客服监控系统 (Monitor Agent)
 
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.1-brightgreen)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.2-brightgreen)
 ![React](https://img.shields.io/badge/React-18.3.1-blue)
 ![Java](https://img.shields.io/badge/Java-17-red)
-![AgentScope](https://img.shields.io/badge/AgentScope-1.0.5-orange)
+![AgentScope](https://img.shields.io/badge/AgentScope-1.0.9-orange)
 
 > 基于 AgentScope 框架的智能客服监控系统，结合 RAG（检索增强生成）与 DevOps（运维监控）功能，提供实时监控、智能问答和自动告警能力。
 
@@ -27,9 +27,9 @@
 ## 技术栈
 
 ### 后端
-- **框架**: Spring Boot 4.0.1 (WebFlux)
+- **框架**: Spring Boot 4.0.2 (WebFlux)
 - **语言**: Java 17
-- **AI 框架**: AgentScope 1.0.5
+- **AI 框架**: AgentScope 1.0.9
 - **响应式**: Spring WebFlux + Reactor
 - **LLM 集成**: OpenAI Java SDK
 - **HTTP 客户端**: OkHttp3

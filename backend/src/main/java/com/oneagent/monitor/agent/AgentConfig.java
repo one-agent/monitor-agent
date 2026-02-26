@@ -73,7 +73,7 @@ public class AgentConfig {
                 .modelName(llmConfig.getModelName())
                 .stream(llmConfig.getStream())
                 .formatter(new OpenAIChatFormatter())
-                .defaultOptions(GenerateOptions.builder()
+                .generateOptions(GenerateOptions.builder()
                         .temperature(llmConfig.getTemperature())
                         .maxTokens(llmConfig.getMaxTokens())
                         .build())

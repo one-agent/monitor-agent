@@ -119,7 +119,7 @@ public class MonitorProperties {
          * 告警去重时间窗口（秒）
          * 同一监控项在此时间内只发送一次告警
          */
-        private int alertDedupWindow = 300;
+        private int alertDedupeWindow = 300;
 
         /**
          * Webhook 验证密钥（可选）

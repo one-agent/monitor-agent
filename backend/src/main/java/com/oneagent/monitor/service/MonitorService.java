@@ -47,9 +47,9 @@ public class MonitorService {
      * @return 如果应该发送告警返回 true，否则返回 false
      */
     public boolean shouldSendAlert(String monitorId) {
-        int dedupWindowSeconds = monitorProperties.getUptimeKuma().getAlertDedupWindow();
+        int dedupeWindowSeconds = monitorProperties.getUptimeKuma().getAlertDedupeWindow();
         
-        if (dedupWindowSeconds <= 0) {
+        if (dedupeWindowSeconds <= 0) {
             // 未配置去重窗口，始终发送告警
             return true;
         }
@@ -65,7 +65,7 @@ public class MonitorService {
 
         // 检查是否超过去重窗口
         long secondsSinceLastAlert = ChronoUnit.SECONDS.between(lastAlertTime, now);
-        if (secondsSinceLastAlert >= dedupWindowSeconds) {
+        if (secondsSinceLastAlert >= dedupeWindowSeconds) {
             // 超过去重窗口，可以发送告警
             lastAlertTimes.put(monitorId, now);
             return true;
@@ -81,12 +81,12 @@ public class MonitorService {
      * 定期清理超过去重窗口2倍时间的记录
      */
     public void cleanupExpiredAlerts() {
-        int dedupWindowSeconds = monitorProperties.getUptimeKuma().getAlertDedupWindow();
-        if (dedupWindowSeconds <= 0) {
+        int dedupeWindowSeconds = monitorProperties.getUptimeKuma().getAlertDedupeWindow();
+        if (dedupeWindowSeconds <= 0) {
             return;
         }
 
-        LocalDateTime threshold = LocalDateTime.now().minusSeconds(dedupWindowSeconds * 2);
+        LocalDateTime threshold = LocalDateTime.now().minusSeconds(dedupeWindowSeconds * 2L);
         lastAlertTimes.entrySet().removeIf(entry -> {
             boolean expired = entry.getValue().isBefore(threshold);
             if (expired) {

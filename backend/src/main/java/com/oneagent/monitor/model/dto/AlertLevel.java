@@ -32,15 +32,15 @@ public enum AlertLevel {
 
     /**
      * 根据 Uptime Kuma 的 status 值获取告警级别
-     * 
+     *
      * @param status Uptime Kuma heartbeat.status 值
      * @return 对应的告警级别
      */
     public static AlertLevel fromStatus(int status) {
         return switch (status) {
-            case 0 -> DOWN;
-            case 1 -> INFO;
-            case 2 -> WARNING;
+            case 0 -> DOWN;      // 0 = DOWN (服务完全不可用)
+            case 1 -> WARNING;   // 1 = UP (服务正常，但可能有问题)
+            case 2 -> INFO;      // 2 = DEGRADED (服务降级) 或恢复通知
             default -> WARNING;
         };
     }

@@ -434,4 +434,158 @@ public class WebFluxStreamingController {
             return "\"" + content.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r") + "\"";
         }
     }
+
+    /**
+     * 接收 Alertmanager 发送的日志告警通知
+     * 支持组合条件告警：日志级别 + 关键字 + 频率
+     */
+    @PostMapping("/webhook/log-alert")
+    public Mono<Map<String, String>> handleLogAlert(
+            @RequestBody com.oneagent.monitor.model.dto.LogAlertDTO logAlertData,
+            @RequestHeader(value = "X-Log-Alert-Secret", required = false) String webhookSecret) {
+        log.info("收到 Log Alert Webhook: status={}, alerts={}",
+                logAlertData.getStatus(), logAlertData.getAlerts() != null ? logAlertData.getAlerts().size() : 0);
+
+        // 检查日志告警集成是否启用
+        if (!monitorProperties.getLogAlert().isEnabled()) {
+            log.warn("日志告警集成未启用，忽略 Webhook 请求");
+            return Mono.just(Map.of(
+                    "status", "ignored",
+                    "message", "Log alert integration is not enabled"
+            ));
+        }
+
+        // 验证 Webhook 密钥（如果配置）
+        if (monitorProperties.getLogAlert().getWebhookSecret() != null
+                && !monitorProperties.getLogAlert().getWebhookSecret().isEmpty()) {
+            if (!monitorProperties.getLogAlert().getWebhookSecret().equals(webhookSecret)) {
+                log.warn("Log Alert Webhook 密钥验证失败");
+                return Mono.just(Map.of(
+                        "status", "error",
+                        "message", "Invalid webhook secret"
+                ));
+            }
+        }
+
+        try {
+            // 检查是否需要处理告警
+            if (!logAlertData.needsAlert()) {
+                log.info("Log Alert 状态为 resolved，无需处理告警");
+                return Mono.just(Map.of(
+                        "status", "success",
+                        "message", "Log alert is resolved, no action needed"
+                ));
+            }
+
+            // 解析日志告警数据
+            var logAnalysisService = new com.oneagent.monitor.service.LogAnalysisService(monitorProperties);
+            List<com.oneagent.monitor.model.dto.ErrorLog> errorLogs = logAnalysisService.parseLogAlert(logAlertData);
+
+            if (errorLogs.isEmpty()) {
+                log.warn("解析 Log Alert 失败，没有有效的错误日志");
+                return Mono.just(Map.of(
+                        "status", "error",
+                        "message", "No valid error logs found in alert data"
+                ));
+            }
+
+            // 处理每个错误日志
+            List<Map<String, String>> results = new ArrayList<>();
+            for (com.oneagent.monitor.model.dto.ErrorLog errorLog : errorLogs) {
+                try {
+                    // 生成错误指纹
+                    String fingerprint = logAnalysisService.generateErrorFingerprint(errorLog);
+                    errorLog.setFingerprint(fingerprint);
+
+                    // 判断是否需要触发告警
+                    if (!logAnalysisService.shouldTriggerAlert(errorLog)) {
+                        log.debug("错误日志未满足告警条件: service={}, level={}",
+                                errorLog.getService(), errorLog.getLogLevel());
+                        results.add(Map.of(
+                                "status", "skipped",
+                                "message", "Alert conditions not met",
+                                "fingerprint", fingerprint
+                        ));
+                        continue;
+                    }
+
+                    // 去重检查
+                    if (!monitorService.shouldSendLogAlert(fingerprint)) {
+                        log.info("日志告警被去重机制过滤: fingerprint={}", fingerprint);
+                        results.add(Map.of(
+                                "status", "deduplicated",
+                                "message", "Alert deduplicated",
+                                "fingerprint", fingerprint
+                        ));
+                        continue;
+                    }
+
+                    // 增加错误频率
+                    monitorService.incrementErrorFrequency(fingerprint);
+                    errorLog.setFrequency(monitorService.getErrorFrequency(fingerprint));
+
+                    // 构建监控日志
+                    MonitorLog monitorLog = MonitorLog.builder()
+                            .timestamp(errorLog.getTimestamp())
+                            .status("ERROR")
+                            .msg(errorLog.getSummary())
+                            .monitorId(errorLog.getMonitorId())
+                            .monitorName(errorLog.getMonitorName())
+                            .logLevel(errorLog.getLogLevel().name())
+                            .service(errorLog.getService())
+                            .stackTrace(errorLog.getStackTrace())
+                            .source("alertmanager")
+                            .fingerprint(fingerprint)
+                            .exceptionType(errorLog.getExceptionType())
+                            .build();
+
+                    // 更新监控服务
+                    monitorService.updateStatus(List.of(monitorLog));
+
+                    // 触发告警
+                    var actions = chatService.handleLogAlert(errorLog);
+                    log.info("已发送日志告警: service={}, level={}, fingerprint={}",
+                            errorLog.getService(), errorLog.getLogLevel(), fingerprint);
+
+                    results.add(Map.of(
+                            "status", "success",
+                            "message", "Log alert sent successfully",
+                            "fingerprint", fingerprint,
+                            "feishuWebhook", actions.getFeishuWebhook(),
+                            "apifoxDocId", actions.getApifoxDocId()
+                    ));
+
+                } catch (Exception e) {
+                    log.error("处理错误日志时出错: {}", errorLog.getSummary(), e);
+                    results.add(Map.of(
+                            "status", "error",
+                            "message", "Failed to process error log: " + e.getMessage(),
+                            "summary", errorLog.getSummary()
+                    ));
+                }
+            }
+
+            // 构建响应
+            Map<String, String> response = new java.util.HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Processed " + results.size() + " error logs");
+
+            // 添加第一个成功的结果作为主要结果
+            for (Map<String, String> result : results) {
+                if ("success".equals(result.get("status"))) {
+                    response.putAll(result);
+                    break;
+                }
+            }
+
+            return Mono.just(response);
+
+        } catch (Exception e) {
+            log.error("处理 Log Alert Webhook 时发生错误", e);
+            return Mono.just(Map.of(
+                    "status", "error",
+                    "message", "Failed to process webhook: " + e.getMessage()
+            ));
+        }
+    }
 }

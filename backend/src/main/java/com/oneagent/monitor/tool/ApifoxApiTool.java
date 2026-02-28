@@ -530,4 +530,195 @@ public class ApifoxApiTool {
                         ? "- **监控类型**: " + monitorType + "\n" : ""
         );
     }
+
+    /**
+     * 创建日志故障文档（包含日志分析和解决方案）
+     *
+     * @param errorLog 错误日志
+     * @param analysis AI 分析结果
+     * @param solution 解决方案
+     * @param historicalFaults 历史类似故障（格式化后的文本）
+     * @return 文档 ID
+     */
+    public String createLogErrorDocument(
+            com.oneagent.monitor.model.dto.ErrorLog errorLog,
+            String analysis,
+            String solution,
+            String historicalFaults
+    ) {
+        log.info("Creating log error document: service={}, level={}, exceptionType={}",
+                errorLog.getService(), errorLog.getLogLevel(), errorLog.getExceptionType());
+
+        String apiToken = monitorProperties.getApifox().getApiToken();
+        String projectId = monitorProperties.getApifox().getProjectId();
+        String folderId = monitorProperties.getApifox().getFolderId();
+        String moduleId = monitorProperties.getApifox().getModuleId();
+
+        String result;
+        // 检查是否已配置
+        if (apiToken == null || apiToken.contains("your-apifox-token-here") ||
+            projectId == null || projectId.contains("your-project-id-here")) {
+            String docId = "LOG_" + UUID.randomUUID().toString().substring(0, 8);
+            String msg = String.format(
+                    "Apifox API not fully configured. Simulation: docId=%s, service=%s",
+                    docId, errorLog.getService());
+            log.warn(msg);
+            result = docId;
+            return wrapResult(result);
+        }
+
+        try {
+            String docTitle = String.format("[%s] %s - %s",
+                    errorLog.getLogLevel().getDescription(),
+                    errorLog.getService(),
+                    errorLog.getExceptionType() != null ? errorLog.getExceptionType() : "Error");
+            String docId = "LOG_" + errorLog.getFingerprint() != null
+                    ? errorLog.getFingerprint().substring(0, 8)
+                    : UUID.randomUUID().toString().substring(0, 8);
+
+            // 使用 form-urlencoded 格式构建请求体
+            String formData = buildFormDataLogError(
+                    docTitle, folderId, moduleId, errorLog, analysis, solution, historicalFaults
+            );
+
+            String apiUrl = monitorProperties.getApifox().getApiUrl() + "/api/v1/doc?locale=zh-CN";
+
+            RequestBody body = RequestBody.create(formData, FORM);
+            Request request = new Request.Builder()
+                    .url(apiUrl)
+                    .addHeader("Authorization", "Bearer " + apiToken)
+                    .addHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
+                    .addHeader("Accept", "application/json")
+                    .addHeader("x-project-id", projectId)
+                    .post(body)
+                    .build();
+
+            try (Response response = httpClient.newCall(request).execute()) {
+                if (response.isSuccessful() && response.body() != null) {
+                    String responseBody = response.body().string();
+                    JsonNode jsonNode = objectMapper.readTree(responseBody);
+                    if (jsonNode.has("success") && jsonNode.get("success").asBoolean() &&
+                        jsonNode.has("data") && jsonNode.get("data").has("id")) {
+                        String actualDocId = jsonNode.get("data").get("id").asText();
+                        log.info("Log error document created successfully: {}", actualDocId);
+                        result = actualDocId;
+                    } else {
+                        result = docId;
+                    }
+                } else {
+                    log.error("Failed to create log error document: code={}", response.code());
+                    result = docId;
+                }
+            }
+        } catch (IOException e) {
+            log.error("Error creating log error document", e);
+            result = "LOG_" + UUID.randomUUID().toString().substring(0, 8);
+        }
+
+        return wrapResult(result);
+    }
+
+    /**
+     * 构建日志故障的 form-urlencoded 格式请求体
+     */
+    private String buildFormDataLogError(
+            String docTitle, String folderId, String moduleId,
+            com.oneagent.monitor.model.dto.ErrorLog errorLog,
+            String analysis, String solution, String historicalFaults
+    ) {
+        String markdownContent = buildDocContentLogError(errorLog, analysis, solution, historicalFaults);
+
+        StringBuilder formData = new StringBuilder();
+        formData.append("title=").append(urlEncode(docTitle));
+        formData.append("&markdown_content=").append(urlEncode(markdownContent));
+
+        if (folderId != null && !folderId.isEmpty()) {
+            formData.append("&folder_id=").append(urlEncode(folderId));
+        }
+        if (moduleId != null && !moduleId.isEmpty()) {
+            formData.append("&module_id=").append(urlEncode(moduleId));
+        }
+
+        return formData.toString();
+    }
+
+    /**
+     * 构建日志故障的 Markdown 格式文档内容
+     */
+    private String buildDocContentLogError(
+            com.oneagent.monitor.model.dto.ErrorLog errorLog,
+            String analysis, String solution, String historicalFaults
+    ) {
+        StringBuilder content = new StringBuilder();
+
+        // 标题
+        content.append(String.format("# %s %s - %s\n\n",
+                errorLog.getLogLevel().getEmoji(),
+                errorLog.getLogLevel().getDescription(),
+                errorLog.getService()));
+
+        // 基本信息
+        content.append("## 基本信息\n\n");
+        content.append(String.format("- **服务名称**: %s\n", errorLog.getService()));
+        content.append(String.format("- **日志级别**: %s\n", errorLog.getLogLevel().getDescription()));
+        content.append(String.format("- **发生时间**: %s\n", errorLog.getTimestamp()));
+
+        if (errorLog.getExceptionType() != null && !errorLog.getExceptionType().isEmpty()) {
+            content.append(String.format("- **异常类型**: %s\n", errorLog.getExceptionType()));
+        }
+
+        if (errorLog.getAlertUrl() != null && !errorLog.getAlertUrl().isEmpty()) {
+            content.append(String.format("- **告警链接**: %s\n", errorLog.getAlertUrl()));
+        }
+
+        content.append("\n");
+
+        // 错误详情
+        content.append("## 错误详情\n\n");
+        content.append("### 错误消息\n\n");
+        content.append("```\n");
+        content.append(errorLog.getSummary());
+        content.append("\n```\n\n");
+
+        if (errorLog.getStackTrace() != null && !errorLog.getStackTrace().isEmpty()) {
+            content.append("### 堆栈跟踪\n\n");
+            content.append("```\n");
+            content.append(errorLog.getStackTrace());
+            content.append("\n```\n\n");
+        }
+
+        // AI 分析
+        if (analysis != null && !analysis.isEmpty()) {
+            content.append("## 📊 AI 分析\n\n");
+            content.append(analysis);
+            content.append("\n\n");
+        }
+
+        // 解决方案
+        if (solution != null && !solution.isEmpty()) {
+            content.append("## 💡 解决方案\n\n");
+            content.append(solution);
+            content.append("\n\n");
+        }
+
+        // 历史类似故障
+        if (historicalFaults != null && !historicalFaults.isEmpty()) {
+            content.append("## 📚 历史类似故障\n\n");
+            content.append(historicalFaults);
+            content.append("\n\n");
+        }
+
+        // 处理状态
+        content.append("## 处理状态\n\n");
+        content.append("- [ ] 已确认\n");
+        content.append("- [ ] 正在处理\n");
+        content.append("- [ ] 已解决\n\n");
+
+        // 备注
+        content.append("## 备注\n\n");
+        content.append("此文档由智能客服监控 Agent 自动生成，基于 Alertmanager 日志告警数据。\n");
+        content.append("文档 ID: ").append(errorLog.getFingerprint() != null ? errorLog.getFingerprint() : "N/A").append("\n");
+
+        return content.toString();
+    }
 }

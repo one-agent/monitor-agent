@@ -28,6 +28,16 @@ public class MonitorProperties {
     private UptimeKumaConfig uptimeKuma = new UptimeKumaConfig();
 
     /**
+     * 日志告警配置
+     */
+    private LogAlertConfig logAlert = new LogAlertConfig();
+
+    /**
+     * 历史故障记录配置
+     */
+    private FaultHistoryConfig faultHistory = new FaultHistoryConfig();
+
+    /**
      * Studio 配置
      */
     private StudioConfig studio = new StudioConfig();
@@ -60,6 +70,94 @@ public class MonitorProperties {
     }
 
     /**
+     * Uptime Kuma 配置
+     */
+    @Data
+    public static class UptimeKumaConfig {
+        /**
+         * 是否启用 Uptime Kuma 集成
+         */
+        private boolean enabled = false;
+
+        /**
+         * 告警去重时间窗口（秒）
+         * 同一监控项在此时间内只发送一次告警
+         */
+        private int alertDedupeWindow = 300;
+
+        /**
+         * Webhook 验证密钥（可选）
+         * 如果配置，则验证 Uptime Kuma Webhook 请求头中的密钥
+         */
+        private String webhookSecret;
+    }
+
+    /**
+     * 日志告警配置
+     */
+    @Data
+    public static class LogAlertConfig {
+        /**
+         * 是否启用日志告警
+         */
+        private boolean enabled = false;
+
+        /**
+         * Webhook 验证密钥（可选）
+         * 如果配置，则验证 Alertmanager Webhook 请求头中的密钥
+         */
+        private String webhookSecret;
+
+        /**
+         * 告警去重时间窗口（秒）
+         * 基于错误指纹的去重，同一错误在此时间内只发送一次告警
+         */
+        private int dedupeWindow = 300;
+
+        /**
+         * 最小告警日志级别
+         * ERROR, WARNING, INFO, DEBUG
+         */
+        private String minLevel = "ERROR";
+
+        /**
+         * 告警关键字（逗号分隔）
+         * 日志消息包含这些关键字时才会触发告警
+         */
+        private String keywords = "Exception,Failed,Timeout,Error,Refused,Denied";
+
+        /**
+         * 频率阈值（可选）
+         * 同一错误在指定时间内出现多少次才触发告警
+         * 0 表示不启用频率检查
+         */
+        private int frequencyThreshold = 0;
+    }
+
+    /**
+     * 历史故障记录配置
+     */
+    @Data
+    public static class FaultHistoryConfig {
+        /**
+         * 存储方式（apifox, memory）
+         */
+        private String storage = "apifox";
+
+        /**
+         * 最大保留天数
+         * 超过此天数的故障记录将被清理
+         */
+        private int maxDays = 30;
+
+        /**
+         * 最大保留记录数
+         * 超过此数量的旧记录将被清理
+         */
+        private int maxRecords = 1000;
+    }
+
+    /**
      * Studio 配置
      */
     @Data
@@ -83,49 +181,6 @@ public class MonitorProperties {
          * 运行名称（用于区分不同的 Agent）
          */
         private String runName = "demo_";
-    }
-
-    /**
-     * Uptime Kuma 配置
-     */
-    @Data
-    public static class UptimeKumaConfig {
-        /**
-         * 是否启用 Uptime Kuma 集成
-         */
-        private boolean enabled = false;
-
-        /**
-         * Uptime Kuma 基础 URL
-         */
-        private String baseUrl = "http://localhost:3001";
-
-        /**
-         * Uptime Kuma API Token（用于轮询）
-         */
-        private String apiToken;
-
-        /**
-         * 是否启用轮询模式
-         */
-        private boolean pollingEnabled = false;
-
-        /**
-         * 轮询间隔（秒）
-         */
-        private int pollingInterval = 60;
-
-        /**
-         * 告警去重时间窗口（秒）
-         * 同一监控项在此时间内只发送一次告警
-         */
-        private int alertDedupeWindow = 300;
-
-        /**
-         * Webhook 验证密钥（可选）
-         * 如果配置，则验证 Uptime Kuma Webhook 请求头中的密钥
-         */
-        private String webhookSecret;
     }
 
     /**

@@ -294,4 +294,110 @@ public class FeishuWebhookTool {
             return "Error: " + e.getMessage();
         }
     }
+
+    /**
+     * 发送日志告警（包含分析和解决方案）
+     *
+     * @param errorLog 错误日志
+     * @param analysis AI 分析结果
+     * @param solution 解决方案
+     * @param historicalCount 历史类似故障数量
+     * @return 发送结果
+     */
+    public String sendLogAlertWithSolution(
+            com.oneagent.monitor.model.dto.ErrorLog errorLog,
+            String analysis,
+            String solution,
+            int historicalCount
+    ) {
+        log.info("Sending log alert with solution: service={}, level={}, exceptionType={}",
+                errorLog.getService(), errorLog.getLogLevel(), errorLog.getExceptionType());
+
+        String webhookUrl = monitorProperties.getFeishu().getWebhookUrl();
+        if (webhookUrl == null || webhookUrl.contains("placeholder")) {
+            String msg = String.format(
+                    "Feishu webhook URL not configured. Log alert: service=%s, level=%s, message=%s",
+                    errorLog.getService(), errorLog.getLogLevel(), errorLog.getSummary());
+            log.warn(msg);
+            return "Simulation: " + msg;
+        }
+
+        try {
+            ObjectNode card = objectMapper.createObjectNode();
+            card.put("msg_type", "interactive");
+
+            ObjectNode cardContent = card.putObject("card");
+            ObjectNode header = cardContent.putObject("header");
+            ObjectNode title = header.putObject("title");
+            title.put("tag", "plain_text");
+
+            // 根据日志级别设置标题和颜色
+            String titleText = String.format("%s %s - %s",
+                    errorLog.getLogLevel().getEmoji(),
+                    errorLog.getLogLevel().getDescription(),
+                    errorLog.getService());
+            title.put("content", titleText);
+            header.put("template", errorLog.getLogLevel().getColor());
+
+            // 构建告警内容
+            StringBuilder contentBuilder = new StringBuilder();
+            contentBuilder.append("**服务名称**: ").append(errorLog.getService()).append("\n");
+            contentBuilder.append("**日志级别**: ").append(errorLog.getLogLevel().getDescription()).append("\n");
+            contentBuilder.append("**发生时间**: ").append(errorLog.getTimestamp()).append("\n");
+
+            if (errorLog.getExceptionType() != null && !errorLog.getExceptionType().isEmpty()) {
+                contentBuilder.append("**异常类型**: ").append(errorLog.getExceptionType()).append("\n");
+            }
+
+            contentBuilder.append("**错误消息**: ").append(errorLog.getSummary()).append("\n");
+
+            // 如果有历史类似故障，显示数量
+            if (historicalCount > 0) {
+                contentBuilder.append("**历史类似故障**: ").append(historicalCount).append(" 条\n");
+            }
+
+            // 添加 AI 分析结果
+            if (analysis != null && !analysis.isEmpty()) {
+                contentBuilder.append("\n---\n");
+                contentBuilder.append("**📊 AI 分析**\n");
+                contentBuilder.append(analysis).append("\n");
+            }
+
+            // 添加解决方案
+            if (solution != null && !solution.isEmpty()) {
+                contentBuilder.append("\n---\n");
+                contentBuilder.append("**💡 解决方案**\n");
+                contentBuilder.append(solution).append("\n");
+            }
+
+            ObjectNode element = objectMapper.createObjectNode();
+            ObjectNode text = element.putObject("text");
+            text.put("tag", "lark_md");
+            text.put("content", contentBuilder.toString());
+            element.put("tag", "div");
+
+            cardContent.set("elements", objectMapper.createArrayNode().add(element));
+
+            RequestBody body = RequestBody.create(card.toString(), JSON);
+            Request request = new Request.Builder()
+                    .url(webhookUrl)
+                    .post(body)
+                    .build();
+
+            try (Response response = httpClient.newCall(request).execute()) {
+                String result;
+                if (response.isSuccessful()) {
+                    log.info("Log alert with solution sent successfully");
+                    result = "Sent success";
+                } else {
+                    log.error("Failed to send log alert: {}", response.code());
+                    result = "Failed: " + response.code();
+                }
+                return objectMapper.writeValueAsString(result);
+            }
+        } catch (IOException e) {
+            log.error("Error sending log alert with solution", e);
+            return "Error: " + e.getMessage();
+        }
+    }
 }

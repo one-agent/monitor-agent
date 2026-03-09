@@ -347,10 +347,29 @@ export default function ChatInterface({
     }
   };
 
-  const handleCopy = (content: string, messageId: string) => {
-    navigator.clipboard.writeText(content);
-    setCopiedMessageId(messageId);
-    setTimeout(() => setCopiedMessageId(null), 2000);
+  const handleCopy = async (content: string, messageId: string) => {
+    try {
+      // 优先使用 Clipboard API（需要安全上下文：HTTPS 或 localhost）
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(content);
+      } else {
+        // 回退方案：使用 document.execCommand（兼容非 HTTPS 环境）
+        const textArea = document.createElement('textarea');
+        textArea.value = content;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopiedMessageId(messageId);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
   };
 
   const handleClearHistory = async () => {
